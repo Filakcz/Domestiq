@@ -1,0 +1,16 @@
+Models
+-Pouze data
+
+Services
+-Veci mimo ui
+-Algoritmus A*, parse GPX
+
+ViewModels
+-Mozek ui
+-Reakce na kliknuti
+
+Views
+-Jen UI (XAML)
+
+Styles
+-Styl UI

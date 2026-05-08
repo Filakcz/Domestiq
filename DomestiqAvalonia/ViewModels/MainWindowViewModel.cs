@@ -1,98 +1,46 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DomestiqAvalonia.Models;
 using DomestiqAvalonia.Services;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace DomestiqAvalonia.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    private readonly CsvImportService _csvService;
-
-    public ObservableCollection<ActivityRecord> Activities { get; } = new();
-
-    [ObservableProperty]
-    private double? _currentFitness;
+    private readonly PathfindingService _pathfindingService;
+    private readonly GpxService _gpxService;
 
     [ObservableProperty]
-    private double? _currentFatigue;
+    private string _statusMessage = "readdy";
 
     [ObservableProperty]
-    private double? _currentForm;
+    private ObservableCollection<RouteNode> _routeNodes = new();
 
     [ObservableProperty]
-    private string _recommendation = "no data";
+    private ObservableCollection<double> _elevationProfile = new();
 
     public MainWindowViewModel()
     {
-        _csvService = new CsvImportService();
+        _pathfindingService = new PathfindingService();
+        _gpxService = new GpxService();
     }
 
     [RelayCommand]
-    private void LoadCsv()
+    private void PlanRoute()
     {
-        // TODO: Use a file picker in a real application
-        string myCsvPath = "/home/filak/Downloads/intervals_activities.csv"; 
-
-        var loadedActivities = _csvService.ImportActivities(myCsvPath)
-            .OrderByDescending(a => a.Date)
-            .ToList();
-
-        Activities.Clear();
-
-        foreach (var activity in loadedActivities)
-        {
-            Activities.Add(activity);
-        }
-
-        UpdateTrainingMetrics(loadedActivities);
+        StatusMessage = "Planning";
     }
 
-    private void UpdateTrainingMetrics(List<ActivityRecord> loadedActivities)
+    [RelayCommand]
+    private void LoadGpx()
     {
-        if (loadedActivities.Count == 0)
-        {
-            return;
-        }
-
-        var latest = loadedActivities.FirstOrDefault();
-        if (latest != null)
-        {
-            CurrentFitness = latest.Fitness;
-            CurrentFatigue = latest.Fatigue;
-            if (CurrentFitness.HasValue && CurrentFatigue.HasValue)
-            {
-                CurrentForm = CurrentFitness - CurrentFatigue;
-                GenerateRecommendation();
-            }
-        }
+        StatusMessage = "GPX";
     }
 
-    private void GenerateRecommendation()
+    [RelayCommand]
+    private void SaveSettings()
     {
-        if (!CurrentForm.HasValue)
-        {
-            return;
-        }
-
-        if (CurrentForm > 5)
-        {
-            Recommendation = "Fresh";
-        }
-        else if (CurrentForm > -10)
-        {
-            Recommendation = "optimal train";
-        }
-        else if (CurrentForm > -30)
-        {
-            Recommendation = "easy";
-        }
-        else
-        {
-            Recommendation = "Rest";
-        }
+        StatusMessage = "Settings saved";
     }
 }

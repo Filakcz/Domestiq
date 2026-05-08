@@ -1,2 +1,2 @@
 # Domestiq
-Your personal domestique that plans and adapts your training for peak perfomance.
+Your personal domestique that plans a route for you.
