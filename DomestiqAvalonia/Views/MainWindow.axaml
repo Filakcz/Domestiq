@@ -3,70 +3,78 @@
         xmlns:vm="using:DomestiqAvalonia.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="DomestiqAvalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Domestique">
+        Title="Domestiq - route planner">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TabControl Margin="10">
-        <TabItem Header="Dashboard">
-            <Grid RowDefinitions="Auto, Auto, *">
-                <StackPanel Grid.Row="0" Margin="10" Orientation="Horizontal" Spacing="10">
-                    <Button Content="Load CSV Data" Command="{Binding LoadCsvCommand}" Padding="10"/>
-                    <TextBlock Text="{Binding Recommendation}" Classes="Recommendation"/>
-                </StackPanel>
-
-                <Border Grid.Row="1" Classes="Card">
-                    <StackPanel Orientation="Horizontal" Spacing="40">
-                        <StackPanel>
-                            <TextBlock Text="Fitness (CTL)" Classes="StatLabel"/>
-                            <TextBlock Text="{Binding CurrentFitness, StringFormat='{}{0:F1}'}" Classes="StatValue"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="Fatigue (ATL)" Classes="StatLabel"/>
-                            <TextBlock Text="{Binding CurrentFatigue, StringFormat='{}{0:F1}'}" Classes="StatValue"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="Form (TSB)" Classes="StatLabel"/>
-                            <TextBlock Text="{Binding CurrentForm, StringFormat='{}{0:F1}'}" Classes="StatValue"/>
-                        </StackPanel>
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Classes="Small"/>
+        
+        <TabControl Margin="10">
+            <TabItem Header="Route Planner">
+                <Grid RowDefinitions="Auto, *">
+                    <StackPanel Grid.Row="0" Classes="PanelMargins">
+                        <Button Content="Plan Route" Command="{Binding PlanRouteCommand}" Classes="Primary"/>
+                        <TextBlock Text="Slider for km?" Classes="Small"/>
                     </StackPanel>
-                </Border>
 
-                <ListBox Grid.Row="2" Margin="10" ItemsSource="{Binding Activities}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Classes="ListItem">
-                                <Grid ColumnDefinitions="*, Auto">
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding Name}" Classes="ItemHeader"/>
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <TextBlock Text="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}"/>
-                                            <TextBlock Text="{Binding Type}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Tss, StringFormat='TSS: {0}'}" Classes="ItemValue"/>
-                                        <TextBlock Text="{Binding NormalizedWatts, StringFormat='NP: {0}W'}" Classes="ItemSubvalue"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
-        </TabItem>
+                    <Border Grid.Row="1" Classes="Section">
+                        <Canvas>
+                            <TextBlock Text="Map" Classes="Placeholder"/>
+                        </Canvas>
+                    </Border>
+                </Grid>
+            </TabItem>
 
-        <TabItem Header="Fitness graph">
-            <TextBlock Text="graph?"/>
-        </TabItem>
-        <TabItem Header="Training planner">
-            <TextBlock Text="touch grass"/>
-        </TabItem>
-   </TabControl>
+
+
+            <TabItem Header="Elevation Profile">
+                <Grid RowDefinitions="Auto, *">
+                    <StackPanel Grid.Row="0" Classes="PanelMargins">
+                        <Button Content="Load GPX" Command="{Binding LoadGpxCommand}" Classes="Primary"/>
+                        <TextBlock Text="Something" Classes="Small"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Classes="Section">
+                        <Canvas>
+                            <TextBlock Text="Elevation prof" Classes="Placeholder"/>
+                        </Canvas>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+
+
+            <TabItem Header="Settings">
+                <ScrollViewer>
+                    <StackPanel Margin="20" Spacing="20">
+                        <TextBlock Text="Application Settings" Classes="Header"/>
+                        
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Routing Preferences" Classes="SubHeader"/>
+                            <CheckBox Content="Avoid highways"/>
+                            <CheckBox Content="Prefer bike paths"/>
+                            <CheckBox Content="Minimize elevation gain"/>
+                        </StackPanel>
+
+                        <Separator/>
+
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Unit System" Classes="SubHeader"/>
+                            <RadioButton Content="Metric (km, m)" IsChecked="True"/>
+                            <RadioButton Content="Imperial (mi, ft)"/>
+                        </StackPanel>
+
+                        <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" Classes="Primary"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </Window>
