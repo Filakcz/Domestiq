@@ -12,7 +12,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly GpxService _gpxService;
 
     [ObservableProperty]
-    private string _statusMessage = "readdy";
+    private double? _selectedLatitude;
+
+    [ObservableProperty]
+    private double? _selectedLongitude;
+
+    [ObservableProperty]
+    private string _statusMessage = "ready";
 
     [ObservableProperty]
     private ObservableCollection<RouteNode> _routeNodes = new();
@@ -24,6 +30,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _pathfindingService = new PathfindingService();
         _gpxService = new GpxService();
+    }
+
+    public void UpdateSelectedPoint(double lat, double lon)
+    {
+        SelectedLatitude = lat;
+        SelectedLongitude = lon;
+        StatusMessage = $"Selected: {lat} {lon}";
     }
 
     [RelayCommand]

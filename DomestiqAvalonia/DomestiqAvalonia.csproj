@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +24,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
-    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="Mapsui.Avalonia12" Version="5.1.0-beta.7" />
   </ItemGroup>
 </Project>

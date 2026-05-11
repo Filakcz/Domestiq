@@ -14,6 +14,7 @@ public class PathfindingService
 
     private double CalculateDistance(RouteNode a, RouteNode b)
     {
+        // https://en.wikipedia.org/wiki/Haversine_formula
         return Math.Sqrt(Math.Pow(a.Latitude - b.Latitude, 2) + Math.Pow(a.Longitude - b.Longitude, 2));
     }
 }
