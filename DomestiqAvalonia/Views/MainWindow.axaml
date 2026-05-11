@@ -3,6 +3,7 @@
         xmlns:vm="using:DomestiqAvalonia.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mapsui="clr-namespace:Mapsui.UI.Avalonia;assembly=Mapsui.UI.Avalonia"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="DomestiqAvalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -25,9 +26,10 @@
                     </StackPanel>
 
                     <Border Grid.Row="1" Classes="Section">
-                        <Canvas>
-                            <TextBlock Text="Map" Classes="Placeholder"/>
-                        </Canvas>
+                        <mapsui:MapControl x:Name="MyMapControl" PointerPressed="OnMapClicked" />
+                        <!-- <Canvas> -->
+                        <!--     <TextBlock Text="Map" Classes="Placeholder"/> -->
+                        <!-- </Canvas>                     -->
                     </Border>
                 </Grid>
             </TabItem>
