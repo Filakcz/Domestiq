@@ -25,11 +25,15 @@
                         <TextBlock Text="Slider for km?" Classes="Small"/>
                     </StackPanel>
 
-                    <Border Grid.Row="1" Classes="Section">
-                        <mapsui:MapControl x:Name="MyMapControl" PointerPressed="OnMapClicked" />
-                        <!-- <Canvas> -->
-                        <!--     <TextBlock Text="Map" Classes="Placeholder"/> -->
-                        <!-- </Canvas>                     -->
+                    <Border Grid.Row="1" Classes="Section" ClipToBounds="True">
+                        <Grid>
+                            <mapsui:MapControl x:Name="MyMapControl" Tapped="OnMapTapped" />
+                            
+                            <StackPanel Margin="10" Spacing="5">
+                                <Button Content="+" Click="OnZoomInClick" Classes="MapButton" />
+                                <Button Content="-" Click="OnZoomOutClick" Classes="MapButton" />
+                            </StackPanel>
+                        </Grid>
                     </Border>
                 </Grid>
             </TabItem>
