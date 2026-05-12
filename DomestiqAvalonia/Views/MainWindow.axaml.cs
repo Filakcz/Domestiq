@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Layers;
@@ -25,16 +26,16 @@ public partial class MainWindow : Window
         var map = new Map();
         map.Layers.Add(OpenStreetMap.CreateTileLayer());
         
-        _pinLayer.Style = new SymbolStyle { Fill = new Brush(Color.Red), SymbolScale = 0.8 };
+        _pinLayer.Style = new SymbolStyle { Fill = new Brush(Color.Red), SymbolScale = 0.4 };
         map.Layers.Add(_pinLayer);
 
         MyMapControl.Map = map;
 
-        var center = SphericalMercator.FromLonLat(14.4179, 50.1265);
+        var center = SphericalMercator.FromLonLat(15.3, 49.75);
         MyMapControl.Map.Navigator.CenterOnAndZoomTo(new MPoint(center.x, center.y), 1000);
     }
 
-    private void OnMapClicked(object? sender, PointerPressedEventArgs e)
+    private void OnMapTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
 
@@ -46,5 +47,15 @@ public partial class MainWindow : Window
 
         var lonLat = SphericalMercator.ToLonLat(worldPosition.X, worldPosition.Y);
         vm.UpdateSelectedPoint(lonLat.lat, lonLat.lon);
+    }
+
+    private void OnZoomInClick(object? sender, RoutedEventArgs e)
+    {
+        MyMapControl.Map.Navigator.ZoomIn();
+    }
+
+    private void OnZoomOutClick(object? sender, RoutedEventArgs e)
+    {
+        MyMapControl.Map.Navigator.ZoomOut();
     }
 }
