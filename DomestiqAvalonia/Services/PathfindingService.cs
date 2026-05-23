@@ -1,20 +1,60 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DomestiqAvalonia.Models;
 
 namespace DomestiqAvalonia.Services;
 
 public class PathfindingService
 {
-    // dijsktra, A*
-    public List<RouteNode> FindPath(RouteNode start, RouteNode end, List<RouteEdge> edges)
+    public List<RouteNode>? FindPath(RouteNode start, RouteNode end, Dictionary<long, RouteNode> nodes)
     {
-        return new List<RouteNode> { start, end };
-    }
+        if (start == null || end == null)
+        {
+            return null;
+        }
 
-    private double CalculateDistance(RouteNode a, RouteNode b)
-    {
-        // https://en.wikipedia.org/wiki/Haversine_formula
-        return Math.Sqrt(Math.Pow(a.Latitude - b.Latitude, 2) + Math.Pow(a.Longitude - b.Longitude, 2));
+        Dictionary<long, double> distances = new Dictionary<long, double>();
+        Dictionary<long, long> previous = new Dictionary<long, long>();
+        PriorityQueue<long, double> pq = new PriorityQueue<long, double>();
+
+        distances[start.Id] = 0;
+        pq.Enqueue(start.Id, 0);
+
+        while (pq.Count > 0)
+        {
+            long cur = pq.Dequeue();
+
+            if (cur == end.Id)
+            {
+                List<RouteNode> path = new List<RouteNode>();
+                long currentId = cur;
+                while (previous.TryGetValue(currentId, out long prevId))
+                {
+                    path.Add(nodes[currentId]);
+                    currentId = prevId;
+                }
+                path.Add(start);
+                path.Reverse();
+                return path;
+            }
+
+            if (!nodes.TryGetValue(cur, out RouteNode? node)){
+                continue;
+            }
+
+            foreach (RouteEdge edge in node.Edges)
+            {
+                double newDist = distances[cur] + edge.Distance;
+                if (!distances.ContainsKey(edge.TargetId) || newDist < distances[edge.TargetId])
+                {
+                    distances[edge.TargetId] = newDist;
+                    previous[edge.TargetId] = cur;
+                    pq.Enqueue(edge.TargetId, newDist);
+                }
+            }
+        }
+
+        return null;
     }
 }

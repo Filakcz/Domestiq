@@ -20,9 +20,10 @@
         <TabControl Margin="10">
             <TabItem Header="Route Planner">
                 <Grid RowDefinitions="Auto, *">
-                    <StackPanel Grid.Row="0" Classes="PanelMargins">
+                    <StackPanel Grid.Row="0" Classes="PanelMargins" Orientation="Horizontal" Spacing="10">
                         <Button Content="Plan Route" Command="{Binding PlanRouteCommand}" Classes="Primary"/>
-                        <TextBlock Text="Slider for km?" Classes="Small"/>
+                        <Button Content="Load PBF" Click="OnLoadPbfClick" />
+                        <TextBlock Text="Click twice on map to set start/end" VerticalAlignment="Center" Classes="Small"/>
                     </StackPanel>
 
                     <Border Grid.Row="1" Classes="Section" ClipToBounds="True">
