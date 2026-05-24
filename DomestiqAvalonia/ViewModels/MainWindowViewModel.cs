@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DomestiqAvalonia.Models;
@@ -23,6 +21,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _statusMessage = "Ready";
+
+    [ObservableProperty]
+    private bool _avoidMotorways = true;
+
+    [ObservableProperty]
+    private bool _avoidOffroad = false;
 
     public event Action<List<RouteNode>>? PathFound;
 
@@ -81,7 +85,7 @@ public partial class MainWindowViewModel : ViewModelBase
         RouteNode startNode = _osmGraph.Nodes[startNodeId];
         RouteNode endNode = _osmGraph.Nodes[endNodeId];
 
-        List<RouteNode>? path = _pathfindingService.FindPath(startNode, endNode, _osmGraph.Nodes);
+        List<RouteNode>? path = _pathfindingService.FindPath(startNode, endNode, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
 
         if (path != null)
         {
@@ -90,7 +94,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            StatusMessage = "COuldnt find path";
+            StatusMessage = "Couldnt find path";
         }
     }
 
@@ -98,12 +102,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadGpx()
     {
         StatusMessage = "GPX";
-    }
-
-    [RelayCommand]
-    private void SaveSettings()
-    {
-        StatusMessage = "Settings saved";
     }
 
     public void LoadPbf(string path)

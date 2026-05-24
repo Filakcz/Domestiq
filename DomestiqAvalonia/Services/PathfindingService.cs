@@ -1,13 +1,11 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using DomestiqAvalonia.Models;
 
 namespace DomestiqAvalonia.Services;
 
 public class PathfindingService
 {
-    public List<RouteNode>? FindPath(RouteNode start, RouteNode end, Dictionary<long, RouteNode> nodes)
+    public List<RouteNode>? FindPath(RouteNode start, RouteNode end, Dictionary<long, RouteNode> nodes, bool avoidMotorway, bool avoidOffroad)
     {
         if (start == null || end == null)
         {
@@ -39,12 +37,22 @@ public class PathfindingService
                 return path;
             }
 
-            if (!nodes.TryGetValue(cur, out RouteNode? node)){
+            if (!nodes.TryGetValue(cur, out RouteNode? node))
+            {
                 continue;
             }
 
             foreach (RouteEdge edge in node.Edges)
             {
+                if (avoidMotorway && edge.IsMotorway)
+                {
+                    continue;
+                }
+                if (avoidOffroad && edge.IsOffroad)
+                {
+                    continue;
+                }
+
                 double newDist = distances[cur] + edge.Distance;
                 if (!distances.ContainsKey(edge.TargetId) || newDist < distances[edge.TargetId])
                 {

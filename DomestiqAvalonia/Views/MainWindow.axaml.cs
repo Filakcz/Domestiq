@@ -54,7 +54,10 @@ public partial class MainWindow : Window
 
     private void OnMapTapped(object? sender, TappedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm) return;
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
 
         var screenPosition = e.GetPosition(MyMapControl);
         var worldPosition = MyMapControl.Map.Navigator.Viewport.ScreenToWorld(screenPosition.X, screenPosition.Y);

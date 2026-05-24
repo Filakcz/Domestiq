@@ -23,13 +23,18 @@ public class OsmGraph
         using var fileStream = File.OpenRead(filePath);
         var source = new PBFOsmStreamSource(fileStream);
 
-        HashSet<long> usedNodeIds = new HashSet<long>(); // pouzite nody 
-        List<Way> ways = new List<Way>(); // cesty dle OsmSharp.Way 
+        HashSet<long> usedNodeIds = new HashSet<long>(); 
+        List<Way> ways = new List<Way>(); 
 
         foreach (var item in source)
         {
-            if (item is Way way && IsRoad(way))
+            if (item is Way way && way.Tags != null && way.Tags.ContainsKey("highway"))
             {
+                if (way.Tags.TryGetValue("bicycle", out string b) && b == "no")
+                {
+                    continue;
+                }
+
                 ways.Add(way);
                 if (way.Nodes != null)
                 {
@@ -48,14 +53,14 @@ public class OsmGraph
         {
             if (item is OsmSharp.Node osmNode)
             {
-                long id = osmNode.Id ?? -1; // pokud null tak se = -1
+                long id = osmNode.Id ?? 0; // pokud null tak se = 0
 
                 if (usedNodeIds.Contains(id))
                 {
                     RouteNode node = new RouteNode(
                         osmNode.Latitude!.Value,
                         osmNode.Longitude!.Value,
-                        osmNode.Id ?? 0 // vytvoreni id dle aktualniho ticku
+                        id // pokud 0 tak dle aktualniho ticku
                     );
 
                     Nodes[node.Id] = node;
@@ -71,6 +76,38 @@ public class OsmGraph
                 continue;
             }    
 
+            way.Tags.TryGetValue("highway", out string highway);
+            way.Tags.TryGetValue("surface", out string surface);
+            way.Tags.TryGetValue("tracktype", out string tracktype);
+            way.Tags.TryGetValue("bicycle", out string bike);
+
+            bool isMotorway = (highway == "motorway" || highway == "motorway_link") && bike != "yes";
+            
+            bool isOffroad = false;
+            
+            // https://wiki.openstreetmap.org/wiki/Key:surface
+            string[] badSurfaces = { "gravel", "dirt", "ground", "unpaved", "sand", "grass", "compacted", "fine_gravel", "woodchips", "earth" };
+            if (surface != null && badSurfaces.Contains(surface))
+            {
+                isOffroad = true;
+            }
+
+            // https://wiki.openstreetmap.org/wiki/Key:highway
+            string[] offroadHighways = { "track", "path", "footway", "steps", "pedestrian" };
+            if (offroadHighways.Contains(highway))
+            {
+                if (surface == null || (surface != "asphalt" && surface != "concrete" && surface != "paved"))
+                {
+                    isOffroad = true;
+                }
+            }
+
+            // https://wiki.openstreetmap.org/wiki/Key:tracktype
+            if (tracktype != null && tracktype != "grade1")
+            {
+                isOffroad = true;
+            }
+
             for (int i = 0; i < way.Nodes.Length - 1; i++)
             {
                 long id1 = way.Nodes[i];
@@ -79,21 +116,15 @@ public class OsmGraph
                 if (Nodes.TryGetValue(id1, out RouteNode? n1) && Nodes.TryGetValue(id2, out RouteNode? n2))
                 {
                     double dist = n1.DistanceTo(n2);
-                    n1.Edges.Add(new RouteEdge(id2, dist));
-                    n2.Edges.Add(new RouteEdge(id1, dist));
+                    
+                    var edge1 = new RouteEdge(id2, dist, isMotorway, isOffroad);
+                    var edge2 = new RouteEdge(id1, dist, isMotorway, isOffroad);
+
+                    n1.Edges.Add(edge1);
+                    n2.Edges.Add(edge2);
                 }
             }
         }
-    }
-
-    private bool IsRoad(Way way)
-    {
-        if (way.Tags == null)
-        {
-            return false;
-        }
-        return way.Tags.ContainsKey("highway");
-        // zatim vsechny cesty (polni, dalnice atd, musi se filtrovat)
     }
 
     private void AddToGrid(RouteNode node)
@@ -156,6 +187,8 @@ public class OsmGraph
             {
                 bw.Write(edge.TargetId);
                 bw.Write(edge.Distance);
+                bw.Write(edge.IsMotorway);
+                bw.Write(edge.IsOffroad);
             }
         }
     }
@@ -180,10 +213,8 @@ public class OsmGraph
             int edgeCount = br.ReadInt32();
             for (int j = 0; j < edgeCount; j++)
             {
-                node.Edges.Add(new RouteEdge(
-                    br.ReadInt64(),
-                    br.ReadDouble()
-                ));
+                RouteEdge edge = new RouteEdge(br.ReadInt64(), br.ReadDouble(), br.ReadBoolean(), br.ReadBoolean());
+                node.Edges.Add(edge);
             }
             Nodes[node.Id] = node;
             AddToGrid(node);

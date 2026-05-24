@@ -65,9 +65,9 @@
                         
                         <StackPanel Spacing="10">
                             <TextBlock Text="Routing Preferences" Classes="SubHeader"/>
-                            <CheckBox Content="Avoid highways"/>
-                            <CheckBox Content="Prefer bike paths"/>
-                            <CheckBox Content="Minimize elevation gain"/>
+                            <CheckBox Content="Avoid motorways" IsChecked="{Binding AvoidMotorways}"/>
+                            <CheckBox Content="Avoid offroad (gravel, trails, dirt)" IsChecked="{Binding AvoidOffroad}"/>
+                            <CheckBox Content="Minimize elevation gain (not implemented)"/>
                         </StackPanel>
 
                         <Separator/>
@@ -77,8 +77,6 @@
                             <RadioButton Content="Metric (km, m)" IsChecked="True"/>
                             <RadioButton Content="Imperial (mi, ft)"/>
                         </StackPanel>
-
-                        <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" Classes="Primary"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
