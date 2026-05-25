@@ -89,7 +89,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (path != null)
         {
-            StatusMessage = $"Path {path.Count} nodes";
+            double totalDist = 0;
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                totalDist += path[i].DistanceTo(path[i + 1]);
+            }
+            
+            StatusMessage = $"Path {path.Count} nodes, distance: {totalDist / 1000} km, elevation: idk m";
             PathFound?.Invoke(path);
         }
         else

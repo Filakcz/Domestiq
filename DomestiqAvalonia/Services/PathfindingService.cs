@@ -17,7 +17,7 @@ public class PathfindingService
         PriorityQueue<long, double> pq = new PriorityQueue<long, double>();
 
         distances[start.Id] = 0;
-        pq.Enqueue(start.Id, 0);
+        pq.Enqueue(start.Id, 0 + start.DistanceTo(end));
 
         while (pq.Count > 0)
         {
@@ -48,17 +48,23 @@ public class PathfindingService
                 {
                     continue;
                 }
+                
+                double weight = 1.0;
                 if (avoidOffroad && edge.IsOffroad)
                 {
-                    continue;
+                    weight = 10.0; // offroad 10x drazsi
                 }
 
-                double newDist = distances[cur] + edge.Distance;
+                double newDist = distances[cur] + (edge.Distance * weight);
                 if (!distances.ContainsKey(edge.TargetId) || newDist < distances[edge.TargetId])
                 {
                     distances[edge.TargetId] = newDist;
                     previous[edge.TargetId] = cur;
-                    pq.Enqueue(edge.TargetId, newDist);
+                    
+                    if (nodes.TryGetValue(edge.TargetId, out RouteNode? targetNode))
+                    {
+                        pq.Enqueue(edge.TargetId, newDist + targetNode.DistanceTo(end));
+                    }
                 }
             }
         }
