@@ -90,12 +90,22 @@ public partial class MainWindowViewModel : ViewModelBase
         if (path != null)
         {
             double totalDist = 0;
+            double elevationGain = 0;
+            double elevationLoss = 0;
+
             for (int i = 0; i < path.Count - 1; i++)
             {
                 totalDist += path[i].DistanceTo(path[i + 1]);
+                double diff = path[i + 1].Elevation - path[i].Elevation;
+                if (diff > 0)
+                {
+                    elevationGain += diff;
+                }
+                else elevationLoss += Math.Abs(diff);
             }
             
-            StatusMessage = $"Path {path.Count} nodes, distance: {totalDist / 1000} km, elevation: idk m";
+            StatusMessage = $"Dist: {totalDist / 1000:F1} km | +{elevationGain:F0}m / -{elevationLoss:F0}m";
+            // StatusMessage = $"Path {path.Count} nodes";
             PathFound?.Invoke(path);
         }
         else
@@ -113,8 +123,21 @@ public partial class MainWindowViewModel : ViewModelBase
     public void LoadPbf(string path)
     {
         StatusMessage = "PBF loading";
-        _osmGraph.LoadFromPbf(path);
+        
+        string? hgtFolder = null;
+        if (Directory.Exists("elevation"))
+        {
+            hgtFolder = "elevation";
+        }
+        
+        if (hgtFolder == null)
+        {
+            StatusMessage = "No elevation folder";
+        }
+
+        _osmGraph.LoadFromPbf(path, hgtFolder);
         _osmGraph.SaveBinary("map.bin");
+        
         StatusMessage = "Graph loaded and cached";
     }
 }

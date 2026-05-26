@@ -4,6 +4,7 @@ using System.IO;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Nts;
@@ -105,18 +106,32 @@ public partial class MainWindow : Window
         MyMapControl.Map.Navigator.ZoomOut();
     }
 
-    private void OnLoadPbfClick(object? sender, RoutedEventArgs e)
+    private async void OnLoadPbfClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm)
+        if (DataContext is not MainWindowViewModel vm)
         {
-            if (File.Exists("/home/filak/Downloads/praha-260507.osm.pbf"))
-            {
-                vm.LoadPbf("/home/filak/Downloads/praha-260507.osm.pbf");
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null)
+        {
+            return;
+        }
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Pick pbf file",
+            AllowMultiple = false,
+            FileTypeFilter = new[] 
+            { 
+                new FilePickerFileType("OSM PBF") { Patterns = new[] { "*.pbf" } } 
             }
-            else
-            {
-                vm.StatusMessage = "Pbf not found";
-            }
+        });
+
+        if (files.Count > 0)
+        {
+            vm.LoadPbf(files[0].Path.LocalPath);
         }
     }
 }

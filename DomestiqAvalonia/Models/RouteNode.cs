@@ -8,11 +8,11 @@ public class RouteNode
     public long Id { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public double Elevation { get; set; }
+    public short Elevation { get; set; }
     public string? Name { get; set; }
     public List<RouteEdge> Edges { get; set; } = new();
 
-    public RouteNode(double lat, double lon, long id = 0, double elevation = 0, string? name = null)
+    public RouteNode(double lat, double lon, long id = 0, short elevation = 0, string? name = null)
     {
         Latitude = lat;
         Longitude = lon;

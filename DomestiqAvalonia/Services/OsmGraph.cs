@@ -15,10 +15,16 @@ public class OsmGraph
     private Dictionary<(int, int), List<long>> _grid = new();
     private const double GridSize = 0.01; // 1 km
 
-    public void LoadFromPbf(string filePath)
+    public void LoadFromPbf(string filePath, string? hgtFolder)
     {
         Nodes.Clear();
         _grid.Clear();
+
+        ElevationService? elevationService = null;
+        if (!string.IsNullOrEmpty(hgtFolder))
+        {
+            elevationService = new ElevationService(hgtFolder);
+        }
 
         using var fileStream = File.OpenRead(filePath);
         var source = new PBFOsmStreamSource(fileStream);
@@ -57,11 +63,19 @@ public class OsmGraph
 
                 if (usedNodeIds.Contains(id))
                 {
-                    RouteNode node = new RouteNode(
-                        osmNode.Latitude!.Value,
-                        osmNode.Longitude!.Value,
-                        id // pokud 0 tak dle aktualniho ticku
-                    );
+                    double lat = osmNode.Latitude!.Value;
+                    double lon = osmNode.Longitude!.Value;
+                    short elev;
+                    if (elevationService != null)
+                    {
+                        elev = elevationService.GetElevation(lat, lon);
+                    }
+                    else
+                    {
+                        elev = 0;
+                    }
+
+                    RouteNode node = new RouteNode(lat, lon, id, elev);
 
                     Nodes[node.Id] = node;
                     AddToGrid(node);
@@ -182,6 +196,7 @@ public class OsmGraph
             bw.Write(node.Id);
             bw.Write(node.Latitude);
             bw.Write(node.Longitude);
+            bw.Write(node.Elevation);
             bw.Write(node.Edges.Count);
             foreach (RouteEdge? edge in node.Edges)
             {
@@ -207,8 +222,9 @@ public class OsmGraph
             long id = br.ReadInt64();
             double lat = br.ReadDouble();
             double lon = br.ReadDouble();
+            short elev = br.ReadInt16();
             
-            RouteNode node = new RouteNode(lat, lon, id: id);
+            RouteNode node = new RouteNode(lat, lon, id, elev);
             
             int edgeCount = br.ReadInt32();
             for (int j = 0; j < edgeCount; j++)
