@@ -17,69 +17,113 @@
     <DockPanel>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Classes="Small"/>
         
-        <TabControl Margin="10">
-            <TabItem Header="Route Planner">
-                <Grid RowDefinitions="Auto, *">
-                    <StackPanel Grid.Row="0" Classes="PanelMargins" Orientation="Horizontal" Spacing="10">
-                        <Button Content="Plan Route" Command="{Binding PlanRouteCommand}" Classes="Primary"/>
-                        <Button Content="Load PBF" Click="OnLoadPbfClick" />
-                        <TextBlock Text="Click twice on map to set start/end" VerticalAlignment="Center" Classes="Small"/>
-                    </StackPanel>
+        <Grid ColumnDefinitions="350, *">
+            <Border Grid.Column="0">
+                <TabControl Margin="5">
+                    <TabItem Header="Route">
+                        <ScrollViewer>
+                            <StackPanel Spacing="15" Margin="10">
+                                <TextBlock Text="Route planning" Classes="Header"/>
+                                
+                                <RadioButton Content="Navigation (A to B)" IsChecked="{Binding IsNavMode}"/>
+                                <RadioButton Content="Loop generator" IsChecked="{Binding IsLoopMode}"/>
+                                
+                                <Separator/>
 
-                    <Border Grid.Row="1" Classes="Section" ClipToBounds="True">
-                        <Grid>
-                            <mapsui:MapControl x:Name="MyMapControl" Tapped="OnMapTapped" />
-                            
-                            <StackPanel Margin="10" Spacing="5">
-                                <Button Content="+" Click="OnZoomInClick" Classes="MapButton" />
-                                <Button Content="-" Click="OnZoomOutClick" Classes="MapButton" />
+                                <StackPanel IsVisible="{Binding IsNavMode}" Spacing="10">
+                                    <TextBlock Text="Click twice on map to set start and end points." TextWrapping="Wrap" Opacity="0.7"/>
+                                    <Button Content="Export to GPX" Click="OnExportGpxClick" HorizontalAlignment="Stretch" Classes="Primary"/>
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding IsLoopMode}" Spacing="10">
+                                    <TextBlock Text="Click on map to set start/home point." TextWrapping="Wrap" Opacity="0.7"/>
+                                    
+                                    <TextBlock Text="{Binding PlannedDistance, StringFormat='Loop distance: {0} km'}" Classes="SubHeader"/>
+                                    <Slider Minimum="5" Maximum="200" Value="{Binding PlannedDistance}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    <Button Content="Generate loop" Command="{Binding GenerateLoopCommand}" HorizontalAlignment="Stretch" Classes="Primary"/>
+                                    
+                                    <Button Content="Export to GPX" Click="OnExportGpxClick" HorizontalAlignment="Stretch" Classes="Primary"/>
+                                </StackPanel>
+
+                                <Separator/>
+
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Elevation profile" Classes="SubHeader"/>
+                                    <Border Height="100" Background="#11000000" CornerRadius="4">
+                                        <ItemsControl ItemsSource="{Binding ElevationProfile}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Rows="1"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border VerticalAlignment="Bottom" Background="#0D6EFD" Margin="0,0,1,0">
+                                                        <Border.Height>
+                                                            <MultiBinding StringFormat="{}{0}">
+                                                                <Binding />
+                                                            </MultiBinding>
+                                                        </Border.Height>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                </StackPanel>
+
+                                <Separator/>
+                                
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="Options" Classes="SubHeader"/>
+                                    <CheckBox Content="Avoid motorways" IsChecked="{Binding AvoidMotorways}"/>
+                                    <CheckBox Content="Avoid offroad" IsChecked="{Binding AvoidOffroad}"/>
+                                </StackPanel>
                             </StackPanel>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </TabItem>
+                        </ScrollViewer>
+                    </TabItem>
 
-
-
-            <TabItem Header="Elevation Profile">
-                <Grid RowDefinitions="Auto, *">
-                    <StackPanel Grid.Row="0" Classes="PanelMargins">
-                        <Button Content="Load GPX" Command="{Binding LoadGpxCommand}" Classes="Primary"/>
-                        <TextBlock Text="Something" Classes="Small"/>
-                    </StackPanel>
-
-                    <Border Grid.Row="1" Classes="Section">
-                        <Canvas>
-                            <TextBlock Text="Elevation prof" Classes="Placeholder"/>
-                        </Canvas>
-                    </Border>
-                </Grid>
-            </TabItem>
-
-
-
-            <TabItem Header="Settings">
-                <ScrollViewer>
-                    <StackPanel Margin="20" Spacing="20">
-                        <TextBlock Text="Application Settings" Classes="Header"/>
-                        
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Routing Preferences" Classes="SubHeader"/>
-                            <CheckBox Content="Avoid motorways" IsChecked="{Binding AvoidMotorways}"/>
-                            <CheckBox Content="Avoid offroad (gravel, trails, dirt)" IsChecked="{Binding AvoidOffroad}"/>
-                            <CheckBox Content="Minimize elevation gain (not implemented)"/>
+                    <TabItem Header="Files">
+                        <StackPanel Margin="15" Spacing="15">
+                            <TextBlock Text="Data management" Classes="Header"/>
+                            
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Map data" Classes="SubHeader"/>
+                                <Button Content="Load different binary map (.bin)" Click="OnLoadBinClick" HorizontalAlignment="Stretch" Classes="Primary"/>
+                                <Button Content="Import OSM PBF (.pbf) - slow" Click="OnLoadPbfClick" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                            
+                            <Separator/>
+                            
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Elevation data" Classes="SubHeader"/>
+                                <TextBlock Text="Place .hgt files in /elevation folder" TextWrapping="Wrap" Opacity="0.7"/>
+                            </StackPanel>
                         </StackPanel>
+                    </TabItem>
 
-                        <Separator/>
+                    <TabItem Header="Settings">
+                        <ScrollViewer>
+                            <StackPanel Margin="15" Spacing="20">
+                                <TextBlock Text="Settings" Classes="Header"/>
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Unit system" Classes="SubHeader"/>
+                                    <RadioButton Content="Metric (km, m)" IsChecked="True"/>
+                                    <RadioButton Content="Imperial (mi, ft)"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
+            </Border>
 
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Unit System" Classes="SubHeader"/>
-                            <RadioButton Content="Metric (km, m)" IsChecked="True"/>
-                            <RadioButton Content="Imperial (mi, ft)"/>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-        </TabControl>
+            <Grid Grid.Column="1">
+                <mapsui:MapControl x:Name="MyMapControl" Tapped="OnMapTapped" />
+                
+                <StackPanel Margin="20" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Left">
+                    <Button Content="+" Click="OnZoomInClick" Classes="MapButton" Background="White" Opacity="0.8"/>
+                    <Button Content="-" Click="OnZoomOutClick" Classes="MapButton" Background="White" Opacity="0.8"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
     </DockPanel>
 </Window>

@@ -32,6 +32,14 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.PathFound += path => UpdatePathLayer(path);
+                vm.PropertyChanged += (sender, args) => 
+                {
+                    if (args.PropertyName == nameof(MainWindowViewModel.StartPoint) || 
+                        args.PropertyName == nameof(MainWindowViewModel.EndPoint))
+                    {
+                        UpdatePinLayer(vm);
+                    }
+                };
             }
         };
     }
@@ -71,16 +79,29 @@ public partial class MainWindow : Window
     private void UpdatePinLayer(MainWindowViewModel vm)
     {
         List<PointFeature> features = new List<PointFeature>();
-        if (vm.StartPoint != null)
+        
+        if (vm.IsNavMode)
         {
-            var p = SphericalMercator.FromLonLat(vm.StartPoint.Longitude, vm.StartPoint.Latitude);
-            features.Add(new PointFeature(new MPoint(p.x, p.y)));
+            if (vm.StartPoint != null)
+            {
+                var p = SphericalMercator.FromLonLat(vm.StartPoint.Longitude, vm.StartPoint.Latitude);
+                features.Add(new PointFeature(new MPoint(p.x, p.y)));
+            }
+            if (vm.EndPoint != null)
+            {
+                var p = SphericalMercator.FromLonLat(vm.EndPoint.Longitude, vm.EndPoint.Latitude);
+                features.Add(new PointFeature(new MPoint(p.x, p.y)));
+            }
         }
-        if (vm.EndPoint != null)
+        else if (vm.IsLoopMode)
         {
-            var p = SphericalMercator.FromLonLat(vm.EndPoint.Longitude, vm.EndPoint.Latitude);
-            features.Add(new PointFeature(new MPoint(p.x, p.y)));
+            foreach (var wp in vm.Waypoints)
+            {
+                var p = SphericalMercator.FromLonLat(wp.Longitude, wp.Latitude);
+                features.Add(new PointFeature(new MPoint(p.x, p.y)));
+            }
         }
+
         _pinLayer.Features = features;
         _pinLayer.DataHasChanged();
     }
@@ -132,6 +153,64 @@ public partial class MainWindow : Window
         if (files.Count > 0)
         {
             vm.LoadPbf(files[0].Path.LocalPath);
+        }
+    }
+
+    private async void OnLoadBinClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null)
+        {
+            return;
+        }
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Pick binary map file",
+            AllowMultiple = false,
+            FileTypeFilter = new[] 
+            { 
+                new FilePickerFileType("Binary map") { Patterns = new[] { "*.bin" } } 
+            }
+        });
+
+        if (files.Count > 0)
+        {
+            vm.LoadBinary(files[0].Path.LocalPath);
+        }
+    }
+
+    private async void OnExportGpxClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null)
+        {
+            return;
+        }
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Route to GPX",
+            DefaultExtension = ".gpx",
+            FileTypeChoices = new[] 
+            { 
+                new FilePickerFileType("GPX Files") { Patterns = new[] { "*.gpx" } } 
+            }
+        });
+
+        if (file != null)
+        {
+            vm.SaveGpx(file.Path.LocalPath);
         }
     }
 }

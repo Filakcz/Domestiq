@@ -22,4 +22,27 @@ public class GpxService
         }
         return profile;
     }
+
+    public void ExportToGpx(string filePath, List<RouteNode> path)
+    {
+        using var fs = File.Create(filePath);
+        using var sw = new StreamWriter(fs);
+
+        sw.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        sw.WriteLine("<gpx version=\"1.1\" creator=\"DomestiqAvalonia\" xmlns=\"http://www.topografix.com/GPX/1/1\">");
+        sw.WriteLine("  <trk>");
+        sw.WriteLine("    <name>Planned Route</name>");
+        sw.WriteLine("    <trkseg>");
+
+        foreach (var node in path)
+        {
+            sw.WriteLine($"      <trkpt lat=\"{node.Latitude}\" lon=\"{node.Longitude}\">");
+            sw.WriteLine($"        <ele>{node.Elevation}</ele>");
+            sw.WriteLine("      </trkpt>");
+        }
+
+        sw.WriteLine("    </trkseg>");
+        sw.WriteLine("  </trk>"); 
+        sw.WriteLine("</gpx>");
+    }
 }
