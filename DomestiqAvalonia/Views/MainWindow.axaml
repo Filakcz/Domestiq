@@ -38,7 +38,7 @@
                                 <StackPanel IsVisible="{Binding IsLoopMode}" Spacing="10">
                                     <TextBlock Text="Click on map to set start/home point." TextWrapping="Wrap" Opacity="0.7"/>
                                     
-                                    <TextBlock Text="{Binding PlannedDistance, StringFormat='Loop distance: {0} km'}" Classes="SubHeader"/>
+                                    <TextBlock Text="{Binding PlannedDistanceDisplay}" Classes="SubHeader"/>
                                     <Slider Minimum="5" Maximum="200" Value="{Binding PlannedDistance}" TickFrequency="5" IsSnapToTickEnabled="True"/>
                                     <Button Content="Generate loop" Command="{Binding GenerateLoopCommand}" HorizontalAlignment="Stretch" Classes="Primary"/>
                                     
@@ -49,26 +49,33 @@
 
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Elevation profile" Classes="SubHeader"/>
-                                    <Border Height="100" Background="#11000000" CornerRadius="4">
-                                        <ItemsControl ItemsSource="{Binding ElevationProfile}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <UniformGrid Rows="1"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border VerticalAlignment="Bottom" Background="#0D6EFD" Margin="0,0,1,0">
-                                                        <Border.Height>
-                                                            <MultiBinding StringFormat="{}{0}">
-                                                                <Binding />
+                                    <Grid RowDefinitions="Auto, Auto">
+                                        <TextBlock Grid.Row="0" Text="{Binding HoverInfo}" Height="15" FontSize="11" HorizontalAlignment="Center" Foreground="#0D6EFD" FontWeight="Bold"/>
+
+                                        <Grid Grid.Row="1" PointerMoved="OnElevationPointerMoved" PointerExited="OnElevationPointerExited" Background="Transparent">
+                                            <Border Height="100" Background="#11000000" CornerRadius="4" ClipToBounds="True">
+                                                <Canvas>
+                                                    <Path Data="{Binding ElevationGeometry}" Fill="#440D6EFD" Stroke="#0D6EFD" StrokeThickness="2" VerticalAlignment="Bottom" Stretch="Fill" Width="300" Height="100"/>
+                                                    
+                                                    <Rectangle Fill="#0D6EFD" Width="1" Height="100" Canvas.Left="{Binding HoverX}">
+                                                        <Rectangle.IsVisible>
+                                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                                <Binding Path="ElevationGeometry" Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
+                                                                <Binding Path="HoverInfo" Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
                                                             </MultiBinding>
-                                                        </Border.Height>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Border>
+                                                        </Rectangle.IsVisible>
+                                                    </Rectangle>
+                                                </Canvas>
+                                            </Border>
+                                            
+                                            <TextBlock Text="{Binding ElevationMaxDisplay}" 
+                                                       IsVisible="{Binding ElevationGeometry, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                       FontSize="10" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="5" Opacity="0.6"/>
+                                            <TextBlock Text="{Binding ElevationMinDisplay}" 
+                                                       IsVisible="{Binding ElevationGeometry, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                       FontSize="10" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="5" Opacity="0.6"/>
+                                        </Grid>
+                                    </Grid>
                                 </StackPanel>
 
                                 <Separator/>
@@ -106,9 +113,9 @@
                             <StackPanel Margin="15" Spacing="20">
                                 <TextBlock Text="Settings" Classes="Header"/>
                                 <StackPanel Spacing="10">
-                                    <TextBlock Text="Unit system" Classes="SubHeader"/>
-                                    <RadioButton Content="Metric (km, m)" IsChecked="True"/>
-                                    <RadioButton Content="Imperial (mi, ft)"/>
+                                    <TextBlock Text="Unit System" Classes="SubHeader"/>
+                                    <RadioButton Content="Metric (km, m)" IsChecked="{Binding IsMetric}"/>
+                                    <RadioButton Content="Imperial (mi, ft)" IsChecked="{Binding !IsMetric}"/>
                                 </StackPanel>
                             </StackPanel>
                         </ScrollViewer>

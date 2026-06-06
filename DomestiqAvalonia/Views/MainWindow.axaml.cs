@@ -22,6 +22,7 @@ public partial class MainWindow : Window
 {
     private MemoryLayer _pinLayer = new MemoryLayer { Name = "PinLayer" };
     private MemoryLayer _pathLayer = new MemoryLayer { Name = "PathLayer" };
+    private MemoryLayer _highlightLayer = new MemoryLayer { Name = "HighlightLayer" };
 
     public MainWindow()
     {
@@ -39,6 +40,10 @@ public partial class MainWindow : Window
                     {
                         UpdatePinLayer(vm);
                     }
+                    if (args.PropertyName == nameof(MainWindowViewModel.HighlightPoint))
+                    {
+                        UpdateHighlightLayer(vm);
+                    }
                 };
             }
         };
@@ -51,14 +56,50 @@ public partial class MainWindow : Window
         
         _pinLayer.Style = new SymbolStyle { Fill = new Brush(Color.Red), SymbolScale = 0.4 };
         _pathLayer.Style = new VectorStyle { Line = new Pen(Color.Blue, 4) };
+        _highlightLayer.Style = new SymbolStyle { Fill = new Brush(Color.Orange), SymbolScale = 0.5 };
 
         map.Layers.Add(_pathLayer);
         map.Layers.Add(_pinLayer);
+        map.Layers.Add(_highlightLayer);
 
         MyMapControl.Map = map;
 
         var center = SphericalMercator.FromLonLat(15.3, 49.75);
         MyMapControl.Map.Navigator.CenterOnAndZoomTo(new MPoint(center.x, center.y), 1000);
+    }
+
+    private void UpdateHighlightLayer(MainWindowViewModel vm)
+    {
+        var features = new List<PointFeature>();
+        if (vm.HighlightPoint != null)
+        {
+            var p = SphericalMercator.FromLonLat(vm.HighlightPoint.Longitude, vm.HighlightPoint.Latitude);
+            features.Add(new PointFeature(new MPoint(p.x, p.y)));
+        }
+        _highlightLayer.Features = features;
+        _highlightLayer.DataHasChanged();
+        MyMapControl.RefreshGraphics();
+    }
+
+    private void OnElevationPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || sender is not Grid grid)
+        {
+            return;
+        }
+        
+        var pos = e.GetPosition(grid);
+        double xPercent = pos.X / grid.Bounds.Width;
+        vm.UpdateHover(xPercent);
+    }
+
+    private void OnElevationPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        vm.ClearHover();
     }
 
     private void OnMapTapped(object? sender, TappedEventArgs e)

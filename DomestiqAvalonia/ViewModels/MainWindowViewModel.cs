@@ -40,10 +40,107 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isLoopMode = false;
 
     [ObservableProperty]
-    private List<double>? _elevationProfile;
+    private bool _isMetric = true;
+
+    [ObservableProperty]
+    private string? _elevationGeometry;
+
+    [ObservableProperty]
+    private string _elevationMinDisplay = "";
+
+    [ObservableProperty]
+    private string _elevationMaxDisplay = "";
+
+    [ObservableProperty]
+    private string _hoverInfo = "";
+
+    [ObservableProperty]
+    private double _hoverX = -10;
+
+    [ObservableProperty]
+    private RouteNode? _highlightPoint;
+    private const double KilometersToMiles = 0.621371;
+
+    public string PlannedDistanceDisplay
+    {
+        get
+        {
+            if (IsMetric)
+            {
+                return $"Loop distance: {PlannedDistance} km";
+            }
+
+            double distanceInMiles = PlannedDistance * KilometersToMiles;
+            return $"Loop distance: {distanceInMiles:F1} mi";
+        }
+    }
 
     public List<RouteNode> Waypoints { get; } = new();
     public event Action<List<RouteNode>>? PathFound;
+
+    public void UpdateHover(double xPercent)
+    {
+        if (_currentPath.Count < 2)
+        {
+            return;
+        }
+
+        int index = (int)Math.Round(xPercent * (_currentPath.Count - 1));
+        index = Math.Clamp(index, 0, _currentPath.Count - 1);
+
+        var node = _currentPath[index];
+        HighlightPoint = node;
+
+        double dist = 0;
+        for (int i = 0; i < index; i++)
+        {
+            dist += _currentPath[i].DistanceTo(_currentPath[i + 1]);
+        }
+
+        string eUnit;
+        string dUnit;
+        double ele;
+        double dVal;
+
+        if (IsMetric)
+        {
+            eUnit = "m";
+            dUnit = "km";
+            ele = node.Elevation;
+            dVal = dist / 1000.0;
+        }
+        else
+        {
+            eUnit = "ft";
+            dUnit = "mi";
+            ele = node.Elevation * 3.28084;
+            dVal = dist * 0.000621371;
+        }
+
+        HoverInfo = $"{ele:F0}{eUnit} | {dVal:F1}{dUnit}";
+        HoverX = xPercent * 300;
+    }
+
+    public void ClearHover()
+    {
+        HighlightPoint = null;
+        HoverX = -10;
+        HoverInfo = "";
+    }
+
+    partial void OnIsMetricChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PlannedDistanceDisplay));
+        if (_currentPath.Count > 0)
+        {
+            UpdatePathInfo(_currentPath);
+        }
+    }
+
+    partial void OnPlannedDistanceChanged(int value)
+    {
+        OnPropertyChanged(nameof(PlannedDistanceDisplay));
+    }
 
     public MainWindowViewModel()
     {
@@ -107,7 +204,9 @@ public partial class MainWindowViewModel : ViewModelBase
         EndPoint = null;
         Waypoints.Clear();
         _currentPath.Clear();
-        ElevationProfile = null;
+        ElevationGeometry = null;
+        ElevationMinDisplay = "";
+        ElevationMaxDisplay = "";
         PathFound?.Invoke(new List<RouteNode>());
         StatusMessage = "Ready";
     }
@@ -261,9 +360,86 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
-        StatusMessage = $"Dist: {dist / 1000:F1}km | +{gain:F0}m / -{loss:F0}m";
-        ElevationProfile = new GpxService().GetElevationProfile(path);
+        if (IsMetric)
+        {
+            StatusMessage = $"Dist: {dist / 1000:F1}km | +{gain:F0}m / -{loss:F0}m";
+            NormalizeElevation(path, 1.0);
+        }
+        else
+        {
+            double miles = dist * 0.000621371;
+            double feetGain = gain * 3.28084;
+            double feetLoss = loss * 3.28084;
+            StatusMessage = $"Dist: {miles:F1}mi | +{feetGain:F0}ft / -{feetLoss:F0}ft";
+            NormalizeElevation(path, 3.28084);
+        }
+
         PathFound?.Invoke(path);
+    }
+
+    private void NormalizeElevation(List<RouteNode> path, double factor)
+    {
+        if (path.Count < 2)
+        {
+            ElevationGeometry = null;
+            return;
+        }
+
+        // vic smooth max points
+        int maxPoints = 300;
+        int step = Math.Max(1, path.Count / maxPoints);
+        var sampled = new List<double>();
+        for (int i = 0; i < path.Count; i += step)
+        {
+            sampled.Add(path[i].Elevation * factor);
+        }
+        if ((path.Count - 1) % step != 0)
+        {
+            sampled.Add(path.Last().Elevation * factor);
+        }
+
+        double min = sampled.Min();
+        double max = sampled.Max();
+        double range = max - min;
+        
+        string unit;
+        if (IsMetric)
+        {
+            unit = "m";
+        }
+        else
+        {
+            unit = "ft";
+        }
+        ElevationMinDisplay = $"{min:F0} {unit}";
+        ElevationMaxDisplay = $"{max:F0} {unit}";
+
+        if (range < 1)
+        {
+            range = 100;
+        }
+
+        int width = 300;
+        int height = 100;
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < sampled.Count; i++)
+        {
+            double x = (double)i / (sampled.Count - 1) * width;
+            double y = height - (((sampled[i] - min) / range) * height * 0.8 + 10); // 80% vyska + 10px margin
+            
+            if (i == 0)
+            {
+                sb.Append($"M {x:F1},{y:F1} ");
+            }
+            else
+            {
+                sb.Append($"L {x:F1},{y:F1} ");
+            }
+        }
+
+        sb.Append($"L {width}, {height} L 0, {height} Z");
+        ElevationGeometry = sb.ToString();
     }
 
     public void LoadBinary(string path)
