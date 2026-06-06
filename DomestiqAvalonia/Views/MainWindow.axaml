@@ -82,8 +82,8 @@
                                 
                                 <StackPanel Spacing="5">
                                     <TextBlock Text="Options" Classes="SubHeader"/>
-                                    <CheckBox Content="Avoid motorways" IsChecked="{Binding AvoidMotorways}"/>
-                                    <CheckBox Content="Avoid offroad" IsChecked="{Binding AvoidOffroad}"/>
+                                    <CheckBox Content="Avoid motorways 🛣️" IsChecked="{Binding AvoidMotorways}"/>
+                                    <CheckBox Content="Avoid offroad 🌲" IsChecked="{Binding AvoidOffroad}"/>
                                 </StackPanel>
                             </StackPanel>
                         </ScrollViewer>

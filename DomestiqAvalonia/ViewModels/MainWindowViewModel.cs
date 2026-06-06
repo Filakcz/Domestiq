@@ -61,6 +61,29 @@ public partial class MainWindowViewModel : ViewModelBase
     private RouteNode? _highlightPoint;
     private const double KilometersToMiles = 0.621371;
 
+
+    partial void OnAvoidMotorwaysChanged(bool value)
+    {
+        AutoRecalculate();
+    }
+
+    partial void OnAvoidOffroadChanged(bool value)
+    {
+        AutoRecalculate();
+    }
+
+    private void AutoRecalculate()
+    {
+        if (IsNavMode && StartPoint != null && EndPoint != null)
+        {
+            PlanRouteInternal(StartPoint, EndPoint);
+        }
+        else if (IsLoopMode && Waypoints.Count > 0)
+        {
+            GenerateLoop();
+        }
+    }
+
     public string PlannedDistanceDisplay
     {
         get

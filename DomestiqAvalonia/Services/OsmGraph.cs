@@ -36,11 +36,6 @@ public class OsmGraph
         {
             if (item is Way way && way.Tags != null && way.Tags.ContainsKey("highway"))
             {
-                if (way.Tags.TryGetValue("bicycle", out string b) && b == "no")
-                {
-                    continue;
-                }
-
                 ways.Add(way);
                 if (way.Nodes != null)
                 {
@@ -88,25 +83,40 @@ public class OsmGraph
             if (way.Nodes == null || way.Nodes.Length < 2)
             {
                 continue;
-            }    
+            }
 
             way.Tags.TryGetValue("highway", out string highway);
             way.Tags.TryGetValue("surface", out string surface);
             way.Tags.TryGetValue("tracktype", out string tracktype);
             way.Tags.TryGetValue("bicycle", out string bike);
 
-            bool isMotorway = (highway == "motorway" || highway == "motorway_link") && bike != "yes";
-            
+            bool isMotorway = (highway == "motorway" || highway == "motorway_link");
             bool isOffroad = false;
-            
-            // https://wiki.openstreetmap.org/wiki/Key:surface
+            int priority = 4;
+
+            if (isMotorway || highway == "trunk")
+            {
+                priority = 1;
+            }
+            else if (highway == "primary" || highway == "secondary")
+            {
+                priority = 2;
+            }
+            else if (highway == "tertiary")
+            {
+                priority = 3;
+            }
+            else if (highway == "service" || highway == "track" || highway == "path")
+            {
+                priority = 5;
+            }
+
             string[] badSurfaces = { "gravel", "dirt", "ground", "unpaved", "sand", "grass", "compacted", "fine_gravel", "woodchips", "earth" };
             if (surface != null && badSurfaces.Contains(surface))
             {
                 isOffroad = true;
             }
 
-            // https://wiki.openstreetmap.org/wiki/Key:highway
             string[] offroadHighways = { "track", "path", "footway", "steps", "pedestrian" };
             if (offroadHighways.Contains(highway))
             {
@@ -115,8 +125,6 @@ public class OsmGraph
                     isOffroad = true;
                 }
             }
-
-            // https://wiki.openstreetmap.org/wiki/Key:tracktype
             if (tracktype != null && tracktype != "grade1")
             {
                 isOffroad = true;
@@ -124,18 +132,11 @@ public class OsmGraph
 
             for (int i = 0; i < way.Nodes.Length - 1; i++)
             {
-                long id1 = way.Nodes[i];
-                long id2 = way.Nodes[i + 1];
-
-                if (Nodes.TryGetValue(id1, out RouteNode? n1) && Nodes.TryGetValue(id2, out RouteNode? n2))
+                if (Nodes.TryGetValue(way.Nodes[i], out RouteNode? n1) && Nodes.TryGetValue(way.Nodes[i + 1], out RouteNode? n2))
                 {
                     double dist = n1.DistanceTo(n2);
-                    
-                    var edge1 = new RouteEdge(id2, dist, isMotorway, isOffroad);
-                    var edge2 = new RouteEdge(id1, dist, isMotorway, isOffroad);
-
-                    n1.Edges.Add(edge1);
-                    n2.Edges.Add(edge2);
+                    n1.Edges.Add(new RouteEdge(n2.Id, dist, isMotorway, isOffroad, priority));
+                    n2.Edges.Add(new RouteEdge(n1.Id, dist, isMotorway, isOffroad, priority));
                 }
             }
         }
@@ -198,12 +199,13 @@ public class OsmGraph
             bw.Write(node.Longitude);
             bw.Write(node.Elevation);
             bw.Write(node.Edges.Count);
-            foreach (RouteEdge? edge in node.Edges)
+            foreach (var edge in node.Edges)
             {
                 bw.Write(edge.TargetId);
                 bw.Write(edge.Distance);
                 bw.Write(edge.IsMotorway);
                 bw.Write(edge.IsOffroad);
+                bw.Write(edge.Priority);
             }
         }
     }
@@ -229,7 +231,7 @@ public class OsmGraph
             int edgeCount = br.ReadInt32();
             for (int j = 0; j < edgeCount; j++)
             {
-                RouteEdge edge = new RouteEdge(br.ReadInt64(), br.ReadDouble(), br.ReadBoolean(), br.ReadBoolean());
+                RouteEdge edge = new RouteEdge(br.ReadInt64(), br.ReadDouble(), br.ReadBoolean(), br.ReadBoolean(), br.ReadInt32());
                 node.Edges.Add(edge);
             }
             Nodes[node.Id] = node;

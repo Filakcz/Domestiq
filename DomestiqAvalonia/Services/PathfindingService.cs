@@ -50,19 +50,48 @@ public class PathfindingService
                 }
                 
                 double weight = 1.0;
-                if (avoidOffroad && edge.IsOffroad)
+                
+                // 1=Motorway, 2=Primary, 3=Tertiary, 4=Residential, 5=Service/Path
+                if (edge.Priority == 2)
                 {
-                    weight = 10.0; // offroad 10x drazsi
+                    weight = 0.8;
+                }
+                else if (edge.Priority == 3) 
+                {
+                    // nejlepsi
+                    weight = 0.7; 
+                }
+                else if (edge.Priority == 5)
+                {
+                    weight = 3.0; 
+                }
+                else if (edge.Priority == 1 && !avoidMotorway)
+                {
+                    weight = 0.5;
                 }
 
-                double newDist = distances[cur] + (edge.Distance * weight);
-                if (!distances.ContainsKey(edge.TargetId) || newDist < distances[edge.TargetId])
+                if (avoidOffroad && edge.IsOffroad)
                 {
-                    distances[edge.TargetId] = newDist;
-                    previous[edge.TargetId] = cur;
-                    
-                    if (nodes.TryGetValue(edge.TargetId, out RouteNode? targetNode))
+                    weight *= 10.0;
+                }
+                else if (!avoidOffroad && edge.IsOffroad)
+                {
+                    weight *= 0.6;
+                }
+
+                if (nodes.TryGetValue(edge.TargetId, out RouteNode? targetNode))
+                {
+                    double eleDiff = targetNode.Elevation - node.Elevation;
+                    if (eleDiff > 0)
                     {
+                        weight += (eleDiff / edge.Distance) * 4.0;
+                    }
+
+                    double newDist = distances[cur] + (edge.Distance * weight);
+                    if (!distances.ContainsKey(edge.TargetId) || newDist < distances[edge.TargetId])
+                    {
+                        distances[edge.TargetId] = newDist;
+                        previous[edge.TargetId] = cur;
                         pq.Enqueue(edge.TargetId, newDist + targetNode.DistanceTo(end));
                     }
                 }
