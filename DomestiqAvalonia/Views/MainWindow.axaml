@@ -15,7 +15,10 @@
     </Design.DataContext>
 
     <DockPanel>
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Classes="Small"/>
+        <StackPanel DockPanel.Dock="Bottom" Margin="10" Spacing="2">
+            <ProgressBar Value="{Binding Progress}" IsVisible="{Binding IsLoading}" Height="4" HorizontalAlignment="Stretch"/>
+            <TextBlock Text="{Binding StatusMessage}" Classes="Small" Margin="0"/>
+        </StackPanel>
         
         <Grid ColumnDefinitions="350, *">
             <Border Grid.Column="0">
@@ -107,6 +110,8 @@
                                 <TextBlock Text="Files in the elevation folder should be in N48E012.hgt format" TextWrapping="Wrap" Opacity="0.7"/>
                                 <Button Content="Load elevation folder (.hgt)" Click="OnLoadElevationFolderClick" HorizontalAlignment="Stretch"/>
                                 <Button Content="Import OSM PBF (.pbf)" Click="OnLoadPbfClick" HorizontalAlignment="Stretch"/>
+                                <TextBlock Text="Elevation data: viewfinderpanoramas.org" TextWrapping="Wrap" Opacity="0.7"/>
+                                <TextBlock Text="OSM data: download.geofabrik.de" TextWrapping="Wrap" Opacity="0.7"/>
                             </StackPanel>
                         </StackPanel>
                     </TabItem>

@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DomestiqAvalonia.Models;
 using DomestiqAvalonia.Services;
+using Avalonia.Threading;
 
 namespace DomestiqAvalonia.ViewModels;
 
@@ -14,6 +16,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly PathfindingService _pathfindingService = new();
     private readonly OsmGraph _osmGraph = new();
     private List<RouteNode> _currentPath = new();
+
+    [ObservableProperty]
+    private double _progress;
+
+    [ObservableProperty]
+    private bool _isLoading;
 
     [ObservableProperty]
     private RouteNode? _startPoint;
@@ -61,6 +69,25 @@ public partial class MainWindowViewModel : ViewModelBase
     private RouteNode? _highlightPoint;
     private const double KilometersToMiles = 0.621371;
 
+    private void SetLoadingTrue() 
+    { 
+        IsLoading = true; 
+        Progress = 0; 
+    }
+    private void SetLoadingFalse() 
+    { 
+        IsLoading = false; 
+        Progress = 0; 
+    }
+
+    private void ReportProgress(double p, string m)
+    {
+        Dispatcher.UIThread.Post(delegate 
+        {
+            Progress = p * 100;
+            StatusMessage = m;
+        });
+    }
 
     partial void OnAvoidMotorwaysChanged(bool value)
     {
@@ -169,9 +196,15 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (File.Exists("map.bin"))
         {
-            _osmGraph.LoadBinary("map.bin");
-            StatusMessage = "Graph loaded";
+            Task.Run(LoadCacheAtStartup);
         }
+    }
+
+    private async Task LoadCacheAtStartup()
+    {
+        Dispatcher.UIThread.Post(SetLoadingTrue);
+        _osmGraph.LoadBinary("map.bin", ReportProgress);
+        Dispatcher.UIThread.Post(SetLoadingFalse);
     }
 
     partial void OnIsNavModeChanged(bool value)
@@ -234,7 +267,7 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusMessage = "Ready";
     }
 
-    public void SaveGpx(string filePath)
+    public async Task SaveGpxAsync(string filePath)
     {
         if (_currentPath.Count == 0)
         {
@@ -243,110 +276,150 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            new GpxService().ExportToGpx(filePath, _currentPath);
-            StatusMessage = "GPX Exported";
+            Dispatcher.UIThread.Post(SetLoadingTrue);
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Exporting GPX"; Progress = 50; });
+            await Task.Run(delegate 
+            {
+                new GpxService().ExportToGpx(filePath, _currentPath);
+            });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "GPX Exported"; });
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Export error: {ex.Message}";
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Export error: " + ex.Message; });
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(SetLoadingFalse);
         }
     }
 
     private void PlanRouteInternal(RouteNode start, RouteNode end)
     {
-        if (_osmGraph.Nodes.Count == 0)
+        Task.Run(delegate 
         {
-            StatusMessage = "No map loaded";
-            return;
-        }
+            Dispatcher.UIThread.Post(SetLoadingTrue);
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Finding path"; Progress = 30; });
 
-        long sId = _osmGraph.FindNearestNode(start.Latitude, start.Longitude);
-        long eId = _osmGraph.FindNearestNode(end.Latitude, end.Longitude);
+            if (_osmGraph.Nodes.Count == 0)
+            {
+                Dispatcher.UIThread.Post(delegate { StatusMessage = "No map loaded"; SetLoadingFalse(); });
+                return;
+            }
 
-        if (sId == -1 || eId == -1)
-        {
-            StatusMessage = "Nearest node error";
-            return;
-        }
+            long sId = _osmGraph.FindNearestNode(start.Latitude, start.Longitude);
+            long eId = _osmGraph.FindNearestNode(end.Latitude, end.Longitude);
 
-        var path = _pathfindingService.FindPath(_osmGraph.Nodes[sId], _osmGraph.Nodes[eId], _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
-        
-        if (path != null)
-        {
-            UpdatePathInfo(path);
-        }
-        else
-        {
-            StatusMessage = "Path not found";
-        }
+            if (sId == -1 || eId == -1)
+            {
+                Dispatcher.UIThread.Post(delegate { StatusMessage = "Nearest node error"; SetLoadingFalse(); });
+                return;
+            }
+
+            Dispatcher.UIThread.Post(delegate { Progress = 60; });
+            var path = _pathfindingService.FindPath(_osmGraph.Nodes[sId], _osmGraph.Nodes[eId], _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
+            int visited = _pathfindingService.LastNodesVisited;
+
+            Dispatcher.UIThread.Post(delegate 
+            {
+                if (path != null)
+                {
+                    UpdatePathInfo(path);
+                    StatusMessage += $" (A* visited: {visited/1000:F0}k nodes)";
+                }
+                else
+                {
+                    StatusMessage = "Path not found";
+                }
+                SetLoadingFalse();
+            });
+        });
     }
 
     [RelayCommand]
     private void GenerateLoop()
     {
-        var basePoint = StartPoint;
-
-        if (IsLoopMode)
+        Task.Run(delegate 
         {
-            basePoint = Waypoints.FirstOrDefault();
-        }
+            Dispatcher.UIThread.Post(SetLoadingTrue);
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Generating loop..."; Progress = 10; });
 
-        if (basePoint == null)
-        {
-            StatusMessage = "Select point first";
-            return;
-        }
+            var basePoint = StartPoint;
+            if (IsLoopMode)
+            {
+                basePoint = Waypoints.FirstOrDefault();
+            }
 
-        if (_osmGraph.Nodes.Count == 0)
-        {
-            StatusMessage = "No map loaded";
-            return;
-        }
+            if (basePoint == null)
+            {
+                Dispatcher.UIThread.Post(delegate { StatusMessage = "Select point first"; SetLoadingFalse(); });
+                return;
+            }
 
-        long sId = _osmGraph.FindNearestNode(basePoint.Latitude, basePoint.Longitude);
-        if (sId == -1)
-        {
-            StatusMessage = "Nearest node error";
-            return;
-        }
+            if (_osmGraph.Nodes.Count == 0)
+            {
+                Dispatcher.UIThread.Post(delegate { StatusMessage = "No map loaded"; SetLoadingFalse(); });
+                return;
+            }
 
-        var startNode = _osmGraph.Nodes[sId];
-        double radius = (PlannedDistance * 1000) / 4.0; // silnice nevedou primo po obvodu
-        var rnd = new Random();
-        double a1 = rnd.NextDouble() * 2 * Math.PI;
-        double a2 = a1 + (Math.PI * 2 / 3);
+            long sId = _osmGraph.FindNearestNode(basePoint.Latitude, basePoint.Longitude);
+            if (sId == -1)
+            {
+                Dispatcher.UIThread.Post(delegate { StatusMessage = "Nearest node error"; SetLoadingFalse(); });
+                return;
+            }
 
-        RouteNode? wp1 = GetOffsetNode(startNode, radius, a1);
-        RouteNode? wp2 = GetOffsetNode(startNode, radius, a2);
+            var startNode = _osmGraph.Nodes[sId]; 
+            double radius = (PlannedDistance * 1000) / 4.0; // silnice nevedou primo po obvodu
+            var rnd = new Random();
+            double a1 = rnd.NextDouble() * 2 * Math.PI;
+            double a2 = a1 + (Math.PI * 2 / 3);
 
-        if (wp1 == null || wp2 == null)
-        {
-            StatusMessage = "Route out of bounds";
-            return;
-        }
+            RouteNode? wp1 = GetOffsetNode(startNode, radius, a1);
+            RouteNode? wp2 = GetOffsetNode(startNode, radius, a2);
 
-        var p1 = _pathfindingService.FindPath(startNode, wp1, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
-        var p2 = _pathfindingService.FindPath(wp1, wp2, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
-        var p3 = _pathfindingService.FindPath(wp2, startNode, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
+            if (wp1 == null || wp2 == null)
+            {
+                Dispatcher.UIThread.Post(delegate { StatusMessage = "Route out of bounds"; SetLoadingFalse(); });
+                return;
+            }
 
-        if (p1 != null && p2 != null && p3 != null)
-        {
-            Waypoints.Clear();
-            Waypoints.Add(startNode);
-            Waypoints.Add(wp1);
-            Waypoints.Add(wp2);
+            int totalVisited = 0;
+            Dispatcher.UIThread.Post(delegate { Progress = 30; StatusMessage = "Calculating path 1/3..."; });
+            var p1 = _pathfindingService.FindPath(startNode, wp1, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
+            totalVisited += _pathfindingService.LastNodesVisited;
+            
+            Dispatcher.UIThread.Post(delegate { Progress = 60; StatusMessage = "Calculating path 2/3..."; });
+            var p2 = _pathfindingService.FindPath(wp1, wp2, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
+            totalVisited += _pathfindingService.LastNodesVisited;
+            
+            Dispatcher.UIThread.Post(delegate { Progress = 90; StatusMessage = "Calculating path 3/3..."; });
+            var p3 = _pathfindingService.FindPath(wp2, startNode, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
+            totalVisited += _pathfindingService.LastNodesVisited;
 
-            List<RouteNode> fullPath = new List<RouteNode>();
+            Dispatcher.UIThread.Post(delegate 
+            {
+                if (p1 != null && p2 != null && p3 != null)
+                {
+                    Waypoints.Clear();
+                    Waypoints.Add(startNode);
+                    Waypoints.Add(wp1);
+                    Waypoints.Add(wp2);
 
-            fullPath.AddRange(p1);
-            fullPath.AddRange(p2.Skip(1)); 
-            fullPath.AddRange(p3.Skip(1));
-            UpdatePathInfo(fullPath);
-        }
-        else
-        {
-            StatusMessage = "Loop path error";
-        }
+                    List<RouteNode> fullPath = new List<RouteNode>();
+                    fullPath.AddRange(p1);
+                    fullPath.AddRange(p2.Skip(1)); 
+                    fullPath.AddRange(p3.Skip(1));
+                    UpdatePathInfo(fullPath);
+                    StatusMessage += $" (A* visited: {totalVisited/1000:F0}k nodes)";
+                }
+                else
+                {
+                    StatusMessage = "Loop path error";
+                }
+                SetLoadingFalse();
+            });
+        });
     }
 
     private RouteNode? GetOffsetNode(RouteNode start, double r, double angle)
@@ -393,7 +466,7 @@ public partial class MainWindowViewModel : ViewModelBase
             double miles = dist * 0.000621371;
             double feetGain = gain * 3.28084;
             double feetLoss = loss * 3.28084;
-            StatusMessage = $"Dist: {miles:F1} mi | +{feetGain:F0} ft / -{feetLoss:F0} ft";
+            StatusMessage = $"Dist: {miles / 1000:F1} mi | +{feetGain:F0} ft / -{feetLoss:F0} ft";
             NormalizeElevation(path, 3.28084);
         }
 
@@ -465,24 +538,31 @@ public partial class MainWindowViewModel : ViewModelBase
         ElevationGeometry = sb.ToString();
     }
 
-    public void LoadBinary(string path)
+    public async Task LoadBinaryAsync(string path)
     {
         try
         {
-            _osmGraph.LoadBinary(path);
-            _osmGraph.SaveBinary("map.bin");
-            StatusMessage = "Loaded binary and saved for next time";
+            Dispatcher.UIThread.Post(SetLoadingTrue);
+            await Task.Run(delegate { _osmGraph.LoadBinary(path, ReportProgress); });
+            await Task.Run(delegate { _osmGraph.SaveBinary("map.bin"); });
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Error: " + ex.Message; });
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(SetLoadingFalse);
         }
     }
 
-    public void LoadElevationFolder(string folderPath)
+    public async Task LoadElevationFolderAsync(string folderPath)
     {
         try
         {
+            Dispatcher.UIThread.Post(SetLoadingTrue);
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Preparing elevation files..."; Progress = 10; });
+
             string targetDir = "elevation";
             if (!Directory.Exists(targetDir))
             {
@@ -497,22 +577,35 @@ public partial class MainWindowViewModel : ViewModelBase
 
             var newFiles = Directory.GetFiles(folderPath, "*.hgt");
             int count = 0;
-            foreach (var file in newFiles)
-            {
-                string fileName = Path.GetFileName(file);
-                File.Copy(file, Path.Combine(targetDir, fileName), true);
-                count++;
-            }
+            int total = newFiles.Length;
 
-            StatusMessage = $"Prepared {count} elevation files";
+            await Task.Run(delegate 
+            {
+                foreach (var file in newFiles)
+                {
+                    string fileName = Path.GetFileName(file);
+                    File.Copy(file, Path.Combine(targetDir, fileName), true);
+                    count++;
+                    if (count % 5 == 0)
+                    {
+                        ReportProgress(count / (double)total, "Copying elevation files (" + count + "/" + total + ")");
+                    }
+                }
+            });
+
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Prepared " + count + " elevation files"; });
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Elevation load error: {ex.Message}";
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Elevation load error: " + ex.Message; });
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(SetLoadingFalse);
         }
     }
 
-    public void LoadPbf(string path)
+    public async Task LoadPbfAsync(string path)
     {
         string? hgtFolder = null;
         if (Directory.Exists("elevation"))
@@ -522,12 +615,25 @@ public partial class MainWindowViewModel : ViewModelBase
         
         if (hgtFolder == null)
         {
-            StatusMessage = "No elevation folder";
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "No elevation folder"; });
+            return;
         }
 
-        _osmGraph.LoadFromPbf(path, hgtFolder);
-        _osmGraph.SaveBinary("map.bin");
-        
-        StatusMessage = "Graph loaded and cached";
+        try
+        {
+            Dispatcher.UIThread.Post(SetLoadingTrue);
+            await Task.Run(delegate { _osmGraph.LoadFromPbf(path, hgtFolder, ReportProgress); });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Saving binary cache..."; });
+            await Task.Run(delegate { _osmGraph.SaveBinary("map.bin"); });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Graph loaded and cached"; });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "PBF Load error: " + ex.Message; });
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(SetLoadingFalse);
+        }
     }
 }

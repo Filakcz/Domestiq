@@ -234,13 +234,13 @@ public partial class MainWindow : Window
             AllowMultiple = false,
             FileTypeFilter = new[] 
             { 
-                new FilePickerFileType("OSM PBF") { Patterns = new[] { "*.pbf" } } 
+                new FilePickerFileType(".osm.pbf") { Patterns = new[] { "*.pbf" } } 
             }
         });
 
         if (files.Count > 0)
         {
-            vm.LoadPbf(files[0].Path.LocalPath);
+            await vm.LoadPbfAsync(files[0].Path.LocalPath);
         }
     }
 
@@ -263,13 +263,13 @@ public partial class MainWindow : Window
             AllowMultiple = false,
             FileTypeFilter = new[] 
             { 
-                new FilePickerFileType("Binary map") { Patterns = new[] { "*.bin" } } 
+                new FilePickerFileType(".bin") { Patterns = new[] { "*.bin" } } 
             }
         });
 
         if (files.Count > 0)
         {
-            vm.LoadBinary(files[0].Path.LocalPath);
+            await vm.LoadBinaryAsync(files[0].Path.LocalPath);
         }
     }
 
@@ -294,7 +294,7 @@ public partial class MainWindow : Window
 
         if (folders.Count > 0)
         {
-            vm.LoadElevationFolder(folders[0].Path.LocalPath);
+            await vm.LoadElevationFolderAsync(folders[0].Path.LocalPath);
         }
     }
 
@@ -323,7 +323,7 @@ public partial class MainWindow : Window
 
         if (file != null)
         {
-            vm.SaveGpx(file.Path.LocalPath);
+            await vm.SaveGpxAsync(file.Path.LocalPath);
         }
     }
 }

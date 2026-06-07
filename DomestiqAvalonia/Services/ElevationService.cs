@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace DomestiqAvalonia.Services;
 
@@ -8,8 +10,10 @@ public class ElevationService
     private readonly string _hgtFolder;
     private const int Arc1Size = 3601;
 
-    private string? _lastFilePath;
-    private byte[]? _lastFileData;
+    // cache
+    private readonly Dictionary<string, byte[]> _tileCache = new();
+    private readonly LinkedList<string> _lruList = new();
+    private const int MaxCachedTiles = 24;
 
     public ElevationService(string hgtFolder)
     {
@@ -31,15 +35,28 @@ public class ElevationService
                 return 0;
             }
 
-            if (_lastFilePath != filePath)
+            byte[]? fileData;
+            if (_tileCache.TryGetValue(filePath, out fileData))
             {
-                _lastFileData = File.ReadAllBytes(filePath);
-                _lastFilePath = filePath;
+                _lruList.Remove(filePath);
+                _lruList.AddFirst(filePath);
             }
-
-            if (_lastFileData == null)
+            else
             {
-                return 0;
+                fileData = File.ReadAllBytes(filePath);
+                
+                if (_tileCache.Count >= MaxCachedTiles)
+                {
+                    var last = _lruList.Last;
+                    if (last != null)
+                    {
+                        _tileCache.Remove(last.Value);
+                        _lruList.RemoveLast();
+                    }
+                }
+
+                _tileCache[filePath] = fileData;
+                _lruList.AddFirst(filePath);
             }
 
             int r = (int)Math.Round((latFloor + 1 - lat) * (Arc1Size - 1));
@@ -48,12 +65,12 @@ public class ElevationService
             // 1 bod = 2 bajty (256 * 1. bajt) + 2. bajt
             int pos = (r * Arc1Size + c) * 2;
             
-            if (pos < 0 || pos > _lastFileData.Length - 2)
+            if (pos < 0 || pos > fileData.Length - 2)
             {
                 return 0;
             }
 
-            short elevation = (short)((_lastFileData[pos] << 8) | _lastFileData[pos + 1]);
+            short elevation = (short)((fileData[pos] << 8) | fileData[pos + 1]);
 
             if (elevation == -32768)
             {

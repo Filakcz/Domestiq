@@ -15,7 +15,17 @@ public class OsmGraph
     private Dictionary<(int, int), List<long>> _grid = new();
     private const double GridSize = 0.01; // 1 km
 
-    public void LoadFromPbf(string filePath, string? hgtFolder)
+    private static readonly HashSet<string> BadSurfaces = new() 
+    { 
+        "gravel", "dirt", "ground", "unpaved", "sand", "grass", "compacted", "fine_gravel", "woodchips", "earth" 
+    };
+
+    private static readonly HashSet<string> OffroadHighways = new() 
+    { 
+        "track", "path", "footway", "steps", "pedestrian" 
+    };
+
+    public void LoadFromPbf(string filePath, string? hgtFolder, Action<double, string>? progress = null)
     {
         Nodes.Clear();
         _grid.Clear();
@@ -27,13 +37,21 @@ public class OsmGraph
         }
 
         using var fileStream = File.OpenRead(filePath);
+        long totalBytes = fileStream.Length;
         var source = new PBFOsmStreamSource(fileStream);
 
         HashSet<long> usedNodeIds = new HashSet<long>(); 
         List<Way> ways = new List<Way>(); 
 
+        int counter = 0;
         foreach (var item in source)
         {
+            counter++;
+            if (counter % 10000 == 0 && progress != null) 
+            {
+                progress((fileStream.Position / (double)totalBytes) * 0.3, "Pbf 1/2: finding ways ("+ ways.Count + ")");
+            }
+
             if (item is Way way && way.Tags != null && way.Tags.ContainsKey("highway"))
             {
                 ways.Add(way);
@@ -50,6 +68,9 @@ public class OsmGraph
         fileStream.Position = 0;
         source = new PBFOsmStreamSource(fileStream);
 
+        int processedNodes = 0;
+        int totalNodesToFind = usedNodeIds.Count;
+
         foreach (var item in source)
         {
             if (item is OsmSharp.Node osmNode)
@@ -60,26 +81,43 @@ public class OsmGraph
                 {
                     double lat = osmNode.Latitude!.Value;
                     double lon = osmNode.Longitude!.Value;
-                    short elev;
+                    short elev = 0;
                     if (elevationService != null)
                     {
                         elev = elevationService.GetElevation(lat, lon);
                     }
-                    else
-                    {
-                        elev = 0;
-                    }
 
                     RouteNode node = new RouteNode(lat, lon, id, elev);
-
                     Nodes[node.Id] = node;
                     AddToGrid(node);
+
+                    processedNodes++;
+                    if (processedNodes % 10000 == 0 && progress != null)
+                    {
+                        progress(0.3 + (fileStream.Position / (double)totalBytes) * 0.4, "Pbf 2/2: processing nodes " + (processedNodes / 1000) + "k / " + (totalNodesToFind / 1000) + "k");
+                    }
+
+                    if (processedNodes >= totalNodesToFind)
+                    {
+                        break;
+                    }
                 }
+            }
+            else if (item is Way || item is Relation)
+            {
+                break;
             }
         }
 
+        int processedWays = 0;
         foreach (Way way in ways)
         {
+            processedWays++;
+            if (processedWays % 5000 == 0 && progress != null)
+            {
+                progress(0.7 + (processedWays / (double)ways.Count) * 0.3, "Connecting roads (" + (processedWays / 1000) + "k)");
+            }
+
             if (way.Nodes == null || way.Nodes.Length < 2)
             {
                 continue;
@@ -88,7 +126,6 @@ public class OsmGraph
             way.Tags.TryGetValue("highway", out string highway);
             way.Tags.TryGetValue("surface", out string surface);
             way.Tags.TryGetValue("tracktype", out string tracktype);
-            way.Tags.TryGetValue("bicycle", out string bike);
 
             bool isMotorway = (highway == "motorway" || highway == "motorway_link");
             bool isOffroad = false;
@@ -111,14 +148,12 @@ public class OsmGraph
                 priority = 5;
             }
 
-            string[] badSurfaces = { "gravel", "dirt", "ground", "unpaved", "sand", "grass", "compacted", "fine_gravel", "woodchips", "earth" };
-            if (surface != null && badSurfaces.Contains(surface))
+            if (surface != null && BadSurfaces.Contains(surface))
             {
                 isOffroad = true;
             }
 
-            string[] offroadHighways = { "track", "path", "footway", "steps", "pedestrian" };
-            if (offroadHighways.Contains(highway))
+            if (highway != null && OffroadHighways.Contains(highway))
             {
                 if (surface == null || (surface != "asphalt" && surface != "concrete" && surface != "paved"))
                 {
@@ -210,7 +245,7 @@ public class OsmGraph
         }
     }
 
-    public void LoadBinary(string filePath)
+    public void LoadBinary(string filePath, Action<double, string>? progress = null)
     {
         Nodes.Clear();
         _grid.Clear();
@@ -219,8 +254,15 @@ public class OsmGraph
         using var br = new BinaryReader(fs);
 
         int nodeCount = br.ReadInt32();
+
+        int edgeCount = 0;
         for (int i = 0; i < nodeCount; i++)
         {
+            if (i % 20000 == 0 && progress != null)
+            {
+                progress((i / (double)nodeCount), "Loading map (" + (i / 1000) + "k / " + (nodeCount / 1000) + "k nodes)");
+            }
+
             long id = br.ReadInt64();
             double lat = br.ReadDouble();
             double lon = br.ReadDouble();
@@ -228,14 +270,19 @@ public class OsmGraph
             
             RouteNode node = new RouteNode(lat, lon, id, elev);
             
-            int edgeCount = br.ReadInt32();
-            for (int j = 0; j < edgeCount; j++)
+            int edgesOnNode = br.ReadInt32();
+            for (int j = 0; j < edgesOnNode; j++)
             {
                 RouteEdge edge = new RouteEdge(br.ReadInt64(), br.ReadDouble(), br.ReadBoolean(), br.ReadBoolean(), br.ReadInt32());
                 node.Edges.Add(edge);
+                edgeCount++;
             }
             Nodes[node.Id] = node;
             AddToGrid(node);
+        }
+        if (progress != null) 
+        {
+            progress(1.0, "Ready (" + (nodeCount / 1000) + "k nodes, " + (edgeCount / 1000) + "k edges)");
         }
     }
 }

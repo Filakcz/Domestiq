@@ -5,6 +5,8 @@ namespace DomestiqAvalonia.Services;
 
 public class PathfindingService
 {
+    public int LastNodesVisited { get; private set; }
+
     public List<RouteNode>? FindPath(RouteNode start, RouteNode end, Dictionary<long, RouteNode> nodes, bool avoidMotorway, bool avoidOffroad)
     {
         if (start == null || end == null)
@@ -12,6 +14,7 @@ public class PathfindingService
             return null;
         }
 
+        LastNodesVisited = 0;
         Dictionary<long, double> distances = new Dictionary<long, double>();
         Dictionary<long, long> previous = new Dictionary<long, long>();
         PriorityQueue<long, double> pq = new PriorityQueue<long, double>();
@@ -22,6 +25,7 @@ public class PathfindingService
         while (pq.Count > 0)
         {
             long cur = pq.Dequeue();
+            LastNodesVisited++;
 
             if (cur == end.Id)
             {
