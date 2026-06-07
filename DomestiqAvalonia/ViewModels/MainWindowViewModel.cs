@@ -470,11 +470,45 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             _osmGraph.LoadBinary(path);
-            StatusMessage = "Loaded";
+            _osmGraph.SaveBinary("map.bin");
+            StatusMessage = "Loaded binary and saved for next time";
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    public void LoadElevationFolder(string folderPath)
+    {
+        try
+        {
+            string targetDir = "elevation";
+            if (!Directory.Exists(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+
+            var oldFiles = Directory.GetFiles(targetDir, "*.hgt");
+            foreach (var file in oldFiles)
+            {
+                File.Delete(file);
+            }
+
+            var newFiles = Directory.GetFiles(folderPath, "*.hgt");
+            int count = 0;
+            foreach (var file in newFiles)
+            {
+                string fileName = Path.GetFileName(file);
+                File.Copy(file, Path.Combine(targetDir, fileName), true);
+                count++;
+            }
+
+            StatusMessage = $"Prepared {count} elevation files";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Elevation load error: {ex.Message}";
         }
     }
 

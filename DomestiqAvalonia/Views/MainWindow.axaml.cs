@@ -273,6 +273,31 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnLoadElevationFolderClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null)
+        {
+            return;
+        }
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select elevation data folder (.hgt)",
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            vm.LoadElevationFolder(folders[0].Path.LocalPath);
+        }
+    }
+
     private async void OnExportGpxClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm)

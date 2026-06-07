@@ -95,15 +95,18 @@
                             
                             <StackPanel Spacing="10">
                                 <TextBlock Text="Map data" Classes="SubHeader"/>
-                                <Button Content="Load different binary map (.bin)" Click="OnLoadBinClick" HorizontalAlignment="Stretch" Classes="Primary"/>
-                                <Button Content="Import OSM PBF (.pbf) - slow" Click="OnLoadPbfClick" HorizontalAlignment="Stretch"/>
+                                <Button Content="Load binary map (.bin)" Click="OnLoadBinClick" HorizontalAlignment="Stretch" Classes="Primary"/>
+                                <TextBlock Text="When loading .bin elevation data is included" TextWrapping="Wrap" Opacity="0.7"/>
                             </StackPanel>
                             
                             <Separator/>
                             
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Elevation data" Classes="SubHeader"/>
-                                <TextBlock Text="Place .hgt files in /elevation folder" TextWrapping="Wrap" Opacity="0.7"/>
+                                <TextBlock Text="Create manual bin (expert) - slow" Classes="SubHeader"/>
+                                <TextBlock Text="Load elevation data before OSM.pbf" TextWrapping="Wrap"/>
+                                <TextBlock Text="Files in the elevation folder should be in N48E012.hgt format" TextWrapping="Wrap" Opacity="0.7"/>
+                                <Button Content="Load elevation folder (.hgt)" Click="OnLoadElevationFolderClick" HorizontalAlignment="Stretch"/>
+                                <Button Content="Import OSM PBF (.pbf)" Click="OnLoadPbfClick" HorizontalAlignment="Stretch"/>
                             </StackPanel>
                         </StackPanel>
                     </TabItem>
