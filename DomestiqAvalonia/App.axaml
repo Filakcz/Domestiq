@@ -10,7 +10,12 @@
     </Application.DataTemplates>
   
     <Application.Styles>
-        <FluentTheme />
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                    <ColorPaletteResources x:Key="Light" Accent="#0D6EFD" />
+                    <ColorPaletteResources x:Key="Dark" Accent="#0D6EFD" />
+                </FluentTheme.Palettes>
+            </FluentTheme>
         <StyleInclude Source="avares://DomestiqAvalonia/Styles/MainStyles.axaml"/>
     </Application.Styles>
 </Application>

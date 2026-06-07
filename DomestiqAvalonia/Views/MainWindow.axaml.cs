@@ -24,6 +24,35 @@ public partial class MainWindow : Window
     private MemoryLayer _pathLayer = new MemoryLayer { Name = "PathLayer" };
     private MemoryLayer _highlightLayer = new MemoryLayer { Name = "HighlightLayer" };
 
+    private static readonly SymbolStyle StartStyle = new()
+    {
+        Fill = new Brush(Color.FromArgb(255, 46, 204, 113)),
+        Outline = new Pen(Color.White, 2),
+        SymbolScale = 0.5
+    };
+
+    private static readonly SymbolStyle EndStyle = new()
+    {
+        Fill = new Brush(Color.FromArgb(255, 231, 76, 60)), 
+        Outline = new Pen(Color.White, 2),
+        SymbolScale = 0.5
+    };
+
+    private static readonly SymbolStyle HomeStyle = new()
+    {
+        Fill = new Brush(Color.Yellow), 
+        Outline = new Pen(Color.Black, 2),
+        SymbolScale = 0.5
+    };
+
+    private static readonly SymbolStyle HoverStyle = new()
+    {
+        Fill = new Brush(Color.FromArgb(220, 0, 255, 255)),
+        Outline = new Pen(Color.Black, 3),
+        SymbolScale = 0.55
+    };
+
+
     public MainWindow()
     {
         InitializeComponent();
@@ -54,9 +83,9 @@ public partial class MainWindow : Window
         var map = new Map();
         map.Layers.Add(OpenStreetMap.CreateTileLayer());
         
-        _pinLayer.Style = new SymbolStyle { Fill = new Brush(Color.Red), SymbolScale = 0.4 };
         _pathLayer.Style = new VectorStyle { Line = new Pen(Color.Blue, 4) };
-        _highlightLayer.Style = new SymbolStyle { Fill = new Brush(Color.Orange), SymbolScale = 0.5 };
+        _pinLayer.Style = null;
+        _highlightLayer.Style = null;
 
         map.Layers.Add(_pathLayer);
         map.Layers.Add(_pinLayer);
@@ -70,11 +99,13 @@ public partial class MainWindow : Window
 
     private void UpdateHighlightLayer(MainWindowViewModel vm)
     {
-        var features = new List<PointFeature>();
+        var features = new List<IFeature>();
         if (vm.HighlightPoint != null)
         {
             var p = SphericalMercator.FromLonLat(vm.HighlightPoint.Longitude, vm.HighlightPoint.Latitude);
-            features.Add(new PointFeature(new MPoint(p.x, p.y)));
+            var feature = new PointFeature(new MPoint(p.x, p.y));
+            feature.Styles.Add(HoverStyle);
+            features.Add(feature);
         }
         _highlightLayer.Features = features;
         _highlightLayer.DataHasChanged();
@@ -119,32 +150,48 @@ public partial class MainWindow : Window
 
     private void UpdatePinLayer(MainWindowViewModel vm)
     {
-        List<PointFeature> features = new List<PointFeature>();
+        var features = new List<IFeature>();
         
         if (vm.IsNavMode)
         {
             if (vm.StartPoint != null)
             {
                 var p = SphericalMercator.FromLonLat(vm.StartPoint.Longitude, vm.StartPoint.Latitude);
-                features.Add(new PointFeature(new MPoint(p.x, p.y)));
+                var f = new PointFeature(new MPoint(p.x, p.y));
+                f.Styles.Add(StartStyle);
+                features.Add(f);
             }
             if (vm.EndPoint != null)
             {
                 var p = SphericalMercator.FromLonLat(vm.EndPoint.Longitude, vm.EndPoint.Latitude);
-                features.Add(new PointFeature(new MPoint(p.x, p.y)));
+                var f = new PointFeature(new MPoint(p.x, p.y));
+                f.Styles.Add(EndStyle);
+                features.Add(f);
             }
         }
         else if (vm.IsLoopMode)
         {
-            foreach (var wp in vm.Waypoints)
+            for (int i = 0; i < vm.Waypoints.Count; i++)
             {
+                var wp = vm.Waypoints[i];
                 var p = SphericalMercator.FromLonLat(wp.Longitude, wp.Latitude);
-                features.Add(new PointFeature(new MPoint(p.x, p.y)));
+                var f = new PointFeature(new MPoint(p.x, p.y));
+                
+                if (i == 0)
+                {
+                    f.Styles.Add(HomeStyle);
+                }
+                else
+                {
+                    f.Styles.Add(EndStyle);
+                }
+                features.Add(f);
             }
         }
 
         _pinLayer.Features = features;
         _pinLayer.DataHasChanged();
+        MyMapControl.RefreshGraphics();
     }
 
     private void UpdatePathLayer(List<RouteNode> path)

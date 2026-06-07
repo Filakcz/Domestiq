@@ -140,7 +140,7 @@ public partial class MainWindowViewModel : ViewModelBase
             dVal = dist * 0.000621371;
         }
 
-        HoverInfo = $"{ele:F0}{eUnit} | {dVal:F1}{dUnit}";
+        HoverInfo = $"{ele:F0} {eUnit} | {dVal:F1} {dUnit}";
         HoverX = xPercent * 300;
     }
 
@@ -321,7 +321,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (wp1 == null || wp2 == null)
         {
-            StatusMessage = "Loop WP error";
+            StatusMessage = "Route out of bounds";
             return;
         }
 
@@ -385,7 +385,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (IsMetric)
         {
-            StatusMessage = $"Dist: {dist / 1000:F1}km | +{gain:F0}m / -{loss:F0}m";
+            StatusMessage = $"Dist: {dist / 1000:F1} km | +{gain:F0} m / -{loss:F0} m";
             NormalizeElevation(path, 1.0);
         }
         else
@@ -393,7 +393,7 @@ public partial class MainWindowViewModel : ViewModelBase
             double miles = dist * 0.000621371;
             double feetGain = gain * 3.28084;
             double feetLoss = loss * 3.28084;
-            StatusMessage = $"Dist: {miles:F1}mi | +{feetGain:F0}ft / -{feetLoss:F0}ft";
+            StatusMessage = $"Dist: {miles:F1} mi | +{feetGain:F0} ft / -{feetLoss:F0} ft";
             NormalizeElevation(path, 3.28084);
         }
 
