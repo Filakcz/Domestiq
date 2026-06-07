@@ -36,8 +36,8 @@ public class GpxService
 
         foreach (var node in path)
         {
-            sw.WriteLine($"      <trkpt lat=\"{node.Latitude}\" lon=\"{node.Longitude}\">");
-            sw.WriteLine($"        <ele>{node.Elevation}</ele>");
+            sw.WriteLine(System.FormattableString.Invariant($"      <trkpt lat=\"{node.Latitude}\" lon=\"{node.Longitude}\">"));
+            sw.WriteLine(System.FormattableString.Invariant($"        <ele>{node.Elevation}</ele>"));
             sw.WriteLine("      </trkpt>");
         }
 

@@ -453,11 +453,11 @@ public partial class MainWindowViewModel : ViewModelBase
             
             if (i == 0)
             {
-                sb.Append($"M {x:F1},{y:F1} ");
+                sb.Append(System.FormattableString.Invariant($"M {x:F1},{y:F1} "));
             }
             else
             {
-                sb.Append($"L {x:F1},{y:F1} ");
+                sb.Append(System.FormattableString.Invariant($"L {x:F1},{y:F1} "));
             }
         }
 
