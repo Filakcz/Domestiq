@@ -69,6 +69,36 @@ public partial class MainWindowViewModel : ViewModelBase
     private RouteNode? _highlightPoint;
     private const double KilometersToMiles = 0.621371;
 
+    private static readonly string[] RouteColors = { "#0D6EFD", "#FF0000", "#00FF00", "#FFA500", "#FF00FF", "#000000" };
+
+    [ObservableProperty]
+    private int _selectedColorIndex = 0;
+
+    [ObservableProperty]
+    private string _routeColor = RouteColors[0];
+
+    [ObservableProperty]
+    private int _routeThickness = 4;
+
+    public event Action? RouteStyleChanged;
+
+    partial void OnSelectedColorIndexChanged(int value)
+    {
+        if (value >= 0 && value < RouteColors.Length)
+        {
+            RouteColor = RouteColors[value];
+        }
+    }
+
+    partial void OnRouteColorChanged(string value)
+    {
+        RouteStyleChanged?.Invoke();
+    }
+    partial void OnRouteThicknessChanged(int value)
+    {
+        RouteStyleChanged?.Invoke();
+    }
+
     private void SetLoadingTrue() 
     { 
         IsLoading = true; 
@@ -282,7 +312,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 new GpxService().ExportToGpx(filePath, _currentPath);
             });
-            Dispatcher.UIThread.Post(delegate { StatusMessage = "GPX Exported"; });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "GPX exported"; });
         }
         catch (Exception ex)
         {
@@ -342,7 +372,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Task.Run(delegate 
         {
             Dispatcher.UIThread.Post(SetLoadingTrue);
-            Dispatcher.UIThread.Post(delegate { StatusMessage = "Generating loop..."; Progress = 10; });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Generating loop"; Progress = 10; });
 
             var basePoint = StartPoint;
             if (IsLoopMode)
@@ -385,15 +415,15 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             int totalVisited = 0;
-            Dispatcher.UIThread.Post(delegate { Progress = 30; StatusMessage = "Calculating path 1/3..."; });
+            Dispatcher.UIThread.Post(delegate { Progress = 30; StatusMessage = "Calculating path 1/3"; });
             var p1 = _pathfindingService.FindPath(startNode, wp1, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
             totalVisited += _pathfindingService.LastNodesVisited;
             
-            Dispatcher.UIThread.Post(delegate { Progress = 60; StatusMessage = "Calculating path 2/3..."; });
+            Dispatcher.UIThread.Post(delegate { Progress = 60; StatusMessage = "Calculating path 2/3"; });
             var p2 = _pathfindingService.FindPath(wp1, wp2, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
             totalVisited += _pathfindingService.LastNodesVisited;
             
-            Dispatcher.UIThread.Post(delegate { Progress = 90; StatusMessage = "Calculating path 3/3..."; });
+            Dispatcher.UIThread.Post(delegate { Progress = 90; StatusMessage = "Calculating path 3/3"; });
             var p3 = _pathfindingService.FindPath(wp2, startNode, _osmGraph.Nodes, AvoidMotorways, AvoidOffroad);
             totalVisited += _pathfindingService.LastNodesVisited;
 
@@ -466,7 +496,7 @@ public partial class MainWindowViewModel : ViewModelBase
             double miles = dist * 0.000621371;
             double feetGain = gain * 3.28084;
             double feetLoss = loss * 3.28084;
-            StatusMessage = $"Dist: {miles / 1000:F1} mi | +{feetGain:F0} ft / -{feetLoss:F0} ft";
+            StatusMessage = $"Dist: {miles:F1} mi | +{feetGain:F0} ft / -{feetLoss:F0} ft";
             NormalizeElevation(path, 3.28084);
         }
 
@@ -561,7 +591,7 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             Dispatcher.UIThread.Post(SetLoadingTrue);
-            Dispatcher.UIThread.Post(delegate { StatusMessage = "Preparing elevation files..."; Progress = 10; });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Preparing elevation files"; Progress = 10; });
 
             string targetDir = "elevation";
             if (!Directory.Exists(targetDir))
@@ -623,13 +653,13 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Dispatcher.UIThread.Post(SetLoadingTrue);
             await Task.Run(delegate { _osmGraph.LoadFromPbf(path, hgtFolder, ReportProgress); });
-            Dispatcher.UIThread.Post(delegate { StatusMessage = "Saving binary cache..."; });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "Saving binary cache"; });
             await Task.Run(delegate { _osmGraph.SaveBinary("map.bin"); });
             Dispatcher.UIThread.Post(delegate { StatusMessage = "Graph loaded and cached"; });
         }
         catch (Exception ex)
         {
-            Dispatcher.UIThread.Post(delegate { StatusMessage = "PBF Load error: " + ex.Message; });
+            Dispatcher.UIThread.Post(delegate { StatusMessage = "PBF load error: " + ex.Message; });
         }
         finally
         {

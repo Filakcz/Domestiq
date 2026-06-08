@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -62,6 +64,7 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.PathFound += path => UpdatePathLayer(path);
+                vm.RouteStyleChanged += () => ApplyRouteStyle(vm);
                 vm.PropertyChanged += (sender, args) => 
                 {
                     if (args.PropertyName == nameof(MainWindowViewModel.StartPoint) || 
@@ -76,6 +79,18 @@ public partial class MainWindow : Window
                 };
             }
         };
+    }
+
+    private void ApplyRouteStyle(MainWindowViewModel vm)
+    {
+        try
+        {
+            var color = Color.FromString(vm.RouteColor);
+            _pathLayer.Style = new VectorStyle { Line = new Pen(color, vm.RouteThickness) };
+            _pathLayer.DataHasChanged();
+            MyMapControl.RefreshGraphics();
+        }
+        catch { }
     }
 
     private void InitializeMap()

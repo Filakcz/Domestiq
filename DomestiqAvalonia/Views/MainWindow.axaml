@@ -125,6 +125,29 @@
                                     <RadioButton Content="Metric (km, m)" IsChecked="{Binding IsMetric}"/>
                                     <RadioButton Content="Imperial (mi, ft)" IsChecked="{Binding !IsMetric}"/>
                                 </StackPanel>
+                                <Separator/>
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Route Style" Classes="SubHeader"/>
+                                    <TextBlock Text="Color"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedColorIndex}" HorizontalAlignment="Stretch">
+                                        <ComboBoxItem Content="Blue"/>
+                                        <ComboBoxItem Content="Red"/>
+                                        <ComboBoxItem Content="Green"/>
+                                        <ComboBoxItem Content="Orange"/>
+                                        <ComboBoxItem Content="Magenta"/>
+                                        <ComboBoxItem Content="Black"/>
+                                    </ComboBox>
+                                    <TextBlock Text="Thickness"/>
+                                    <Slider Minimum="1" Maximum="10" Value="{Binding RouteThickness}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+
+                                <Separator/>
+
+                                <StackPanel Spacing="5" Opacity="0.6">
+                                    <TextBlock Text="About" Classes="SubHeader"/>
+                                    <TextBlock Text="Map data © OpenStreetMap contributors"/>
+                                    <TextBlock Text="Elevation data: viewfinderpanoramas.org"/>
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>
